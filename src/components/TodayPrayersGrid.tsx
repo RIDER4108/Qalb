@@ -14,7 +14,7 @@ export function TodayPrayersGrid({ onOpenTimetable }: TodayPrayersGridProps) {
     <section className="space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between px-0.5">
-        <h2 className="text-base font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
+        <h2 className="text-base font-bold text-qalb-ink dark:text-qalb-night-ink">
           Today's Prayers
         </h2>
         <button
@@ -48,7 +48,7 @@ export function TodayPrayersGrid({ onOpenTimetable }: TodayPrayersGridProps) {
                 {/* Top Row: Name and Indicator */}
                 <div className="flex items-center justify-between">
                   <span
-                    className={`text-xs font-serif font-bold tracking-tight ${
+                    className={`text-xs font-bold tracking-tight ${
                       isNext ? "text-white" : "text-qalb-ink dark:text-qalb-night-ink"
                     }`}
                   >
@@ -71,7 +71,7 @@ export function TodayPrayersGrid({ onOpenTimetable }: TodayPrayersGridProps) {
                 {/* Bottom Row: Scheduled Time & Arabic Name */}
                 <div className="mt-2.5 flex items-end justify-between">
                   <span
-                    className={`text-lg sm:text-xl font-serif font-bold tracking-tight tabular-nums ${
+                    className={`text-lg sm:text-xl font-bold tracking-tight tabular-nums ${
                       isNext ? "text-white" : "text-qalb-ink dark:text-qalb-night-ink"
                     }`}
                   >
@@ -80,7 +80,7 @@ export function TodayPrayersGrid({ onOpenTimetable }: TodayPrayersGridProps) {
                   <span
                     dir="rtl"
                     lang="ar"
-                    className={`font-indopak text-xs font-semibold ${
+                    className={`font-arabic-ui text-xs font-semibold ${
                       isNext ? "text-white/90" : "text-qalb-muted"
                     }`}
                   >

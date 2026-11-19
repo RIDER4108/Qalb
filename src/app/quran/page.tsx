@@ -55,7 +55,7 @@ export default function QuranCatalogPage() {
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
-            <h1 className="text-xl font-serif font-bold tracking-tight text-qalb-ink dark:text-qalb-night-ink">
+            <h1 className="text-xl font-bold tracking-tight text-qalb-ink dark:text-qalb-night-ink">
               The Noble Quran
             </h1>
             <p className="text-xs text-qalb-muted font-sans">
@@ -146,7 +146,7 @@ export default function QuranCatalogPage() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-xs sm:text-sm font-serif font-bold text-qalb-ink dark:text-qalb-night-ink group-hover:text-qalb-green dark:group-hover:text-qalb-gold transition-colors">
+                    <h3 className="text-xs sm:text-sm font-bold text-qalb-ink dark:text-qalb-night-ink group-hover:text-qalb-green dark:group-hover:text-qalb-gold transition-colors">
                       {ch.name_simple}
                     </h3>
                     <span className="text-[9px] px-1.5 py-0.5 rounded-md uppercase font-semibold bg-qalb-card-subtle dark:bg-qalb-night-subtle text-qalb-muted">
@@ -163,7 +163,7 @@ export default function QuranCatalogPage() {
               <div
                 dir="rtl"
                 lang="ar"
-                className="font-indopak text-xl font-bold text-qalb-green dark:text-qalb-gold leading-[2.0]"
+                className="font-quran text-xl font-bold text-qalb-green dark:text-qalb-gold leading-[2.0]"
               >
                 {ch.name_arabic}
               </div>

@@ -48,7 +48,7 @@ export function QuickAccessList() {
   return (
     <section className="space-y-3">
       {/* Header */}
-      <h2 className="text-base font-serif font-bold text-qalb-ink dark:text-qalb-night-ink px-0.5">
+      <h2 className="text-base font-bold text-qalb-ink dark:text-qalb-night-ink px-0.5">
         Quick Access
       </h2>
 
@@ -69,7 +69,7 @@ export function QuickAccessList() {
                   <Icon className="w-5 h-5 stroke-[2.2]" />
                 </div>
                 <div>
-                  <h3 className="text-xs sm:text-sm font-serif font-bold text-qalb-ink dark:text-qalb-night-ink group-hover:text-qalb-green dark:group-hover:text-qalb-gold transition-colors">
+                  <h3 className="text-xs sm:text-sm font-bold text-qalb-ink dark:text-qalb-night-ink group-hover:text-qalb-green dark:group-hover:text-qalb-gold transition-colors">
                     {item.title}
                   </h3>
                   <p className="text-[11px] text-qalb-muted font-sans">

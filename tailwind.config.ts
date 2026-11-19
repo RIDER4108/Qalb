@@ -33,10 +33,12 @@ const config: Config = {
         },
       },
       fontFamily: {
-        amiri: ["'Noto Nastaliq Urdu'", "'Amiri'", "Scheherazade New", "serif"],
-        indopak: ["'Noto Nastaliq Urdu'", "'Amiri'", "Scheherazade New", "serif"],
-        serif: ["var(--font-serif)", "Playfair Display", "Georgia", "serif"],
         sans: ["var(--font-sans)", "Plus Jakarta Sans", "system-ui", "sans-serif"],
+        serif: ["var(--font-sans)", "Plus Jakarta Sans", "system-ui", "sans-serif"],
+        quran: ["'Scheherazade New'", "'Amiri'", "serif"],
+        "arabic-ui": ["'Noto Naskh Arabic'", "system-ui", "sans-serif"],
+        amiri: ["'Scheherazade New'", "'Amiri'", "serif"],
+        indopak: ["'Scheherazade New'", "'Amiri'", "serif"],
       },
       boxShadow: {
         "qalb-card": "0 2px 12px -2px rgba(26, 40, 34, 0.04)",

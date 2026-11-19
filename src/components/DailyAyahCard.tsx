@@ -50,7 +50,7 @@ export function DailyAyahCard() {
             <BookOpen className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-xs font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
+            <h3 className="text-xs font-bold text-qalb-ink dark:text-qalb-night-ink">
               Daily Ayah
             </h3>
             <p className="text-[10px] text-qalb-muted font-sans">
@@ -74,13 +74,13 @@ export function DailyAyahCard() {
         <p
           dir="rtl"
           lang="ar"
-          className="font-indopak text-2xl sm:text-3xl font-bold text-qalb-ink dark:text-qalb-night-ink leading-[2.2]"
+          className="font-quran text-2xl sm:text-3xl font-bold text-qalb-ink dark:text-qalb-night-ink leading-[2.3]"
         >
           لَا يُكَلِّفُ اللَّهُ نَفْسًا إِلَّا وُسْعَهَا
         </p>
 
         {/* Transliteration */}
-        <p className="mt-2 text-xs italic font-serif text-qalb-muted">
+        <p className="mt-2 text-xs italic font-sans text-qalb-muted">
           La yukallifullahu nafsan illa wus'aha
         </p>
 

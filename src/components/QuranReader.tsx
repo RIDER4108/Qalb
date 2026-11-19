@@ -49,14 +49,14 @@ export function QuranReader({
           </span>
         </div>
 
-        <h1 className="text-xl sm:text-2xl font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
+        <h1 className="text-xl sm:text-2xl font-bold text-qalb-ink dark:text-qalb-night-ink">
           {chapter.name_simple}
         </h1>
 
         <div
           dir="rtl"
           lang="ar"
-          className="font-indopak text-3xl sm:text-4xl font-bold text-qalb-green dark:text-qalb-gold py-1"
+          className="font-quran text-3xl sm:text-4xl font-bold text-qalb-green dark:text-qalb-gold py-1 leading-[2.2]"
         >
           سُورَةُ {chapter.name_arabic}
         </div>
@@ -106,7 +106,7 @@ export function QuranReader({
           <div
             dir="rtl"
             lang="ar"
-            className="font-indopak text-2xl sm:text-3xl font-semibold text-qalb-green dark:text-qalb-gold tracking-wide"
+            className="font-quran text-2xl sm:text-3xl font-semibold text-qalb-green dark:text-qalb-gold tracking-wide leading-[2.2]"
           >
             بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ
           </div>
@@ -145,12 +145,12 @@ export function QuranReader({
                 </button>
               </div>
 
-              {/* Arabic Scripture: Strict dir="rtl", IndoPak Font, line-height >= 2.2 */}
+              {/* Arabic Scripture: Strict dir="rtl", Scheherazade New Font, line-height >= 2.2 */}
               <div className="pt-4 pb-3">
                 <p
                   dir="rtl"
                   lang="ar"
-                  className={`font-indopak font-normal text-qalb-ink dark:text-qalb-night-ink text-right select-text ${arabicSizes[fontSizeLevel]}`}
+                  className={`font-quran font-normal text-qalb-ink dark:text-qalb-night-ink text-right select-text leading-[2.2] ${arabicSizes[fontSizeLevel]}`}
                   style={{ wordSpacing: "0.15em" }}
                 >
                   {verse.text_uthmani}

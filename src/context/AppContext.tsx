@@ -33,6 +33,8 @@ export interface AppContextType {
   // Habits
   habits: HabitStatus;
   toggleHabit: (habitKey: keyof HabitStatus) => void;
+  isHabitCompletedForDate: (dateKey: string, habitKey: keyof HabitStatus) => boolean;
+  toggleHabitForDate: (dateKey: string, habitKey: keyof HabitStatus) => void;
 
   // Tasbih
   tasbihCount: number;
@@ -82,12 +84,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Prayer Checkbox history: { [dateKey]: { [prayerKey]: boolean } }
   const [prayerHistory, setPrayerHistory] = useState<Record<string, Record<string, boolean>>>({});
 
-  // Habits
-  const [habits, setHabits] = useState<HabitStatus>({
-    sunnah: false,
-    quran: false,
-    adhkar: false,
-  });
+  // Habits history: { [dateKey]: { sunnah: boolean; quran: boolean; adhkar: boolean } }
+  const [habitHistory, setHabitHistory] = useState<Record<string, HabitStatus>>({});
 
   // Tasbih
   const [tasbihCount, setTasbihCount] = useState<number>(0);
@@ -125,11 +123,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } catch (e) {}
     }
 
-    // Habits
-    const savedHabits = localStorage.getItem("qalb-habits");
-    if (savedHabits) {
+    // Habits History
+    const savedHabitHistory = localStorage.getItem("qalb-habit-history");
+    if (savedHabitHistory) {
       try {
-        setHabits(JSON.parse(savedHabits));
+        setHabitHistory(JSON.parse(savedHabitHistory));
       } catch (e) {}
     }
 
@@ -247,13 +245,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (p) => Boolean(prayerHistory[todayKey]?.[p])
   ).length;
 
-  // Habits Toggle
-  const toggleHabit = (habitKey: keyof HabitStatus) => {
-    setHabits((prev) => {
-      const updated = { ...prev, [habitKey]: !prev[habitKey] };
-      localStorage.setItem("qalb-habits", JSON.stringify(updated));
+  // Habits state for today (defaults to false for all habits on a fresh day)
+  const habits: HabitStatus = habitHistory[todayKey] || {
+    sunnah: false,
+    quran: false,
+    adhkar: false,
+  };
+
+  const isHabitCompletedForDate = (dateKey: string, habitKey: keyof HabitStatus): boolean => {
+    return Boolean(habitHistory[dateKey]?.[habitKey]);
+  };
+
+  const toggleHabitForDate = (dateKey: string, habitKey: keyof HabitStatus) => {
+    setHabitHistory((prev) => {
+      const dayHabits = prev[dateKey] || { sunnah: false, quran: false, adhkar: false };
+      const updatedDay: HabitStatus = {
+        ...dayHabits,
+        [habitKey]: !dayHabits[habitKey],
+      };
+      const updated = {
+        ...prev,
+        [dateKey]: updatedDay,
+      };
+      localStorage.setItem("qalb-habit-history", JSON.stringify(updated));
       return updated;
     });
+  };
+
+  const toggleHabit = (habitKey: keyof HabitStatus) => {
+    toggleHabitForDate(getTodayKey(), habitKey);
   };
 
   // Tasbih actions
@@ -368,6 +388,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         todayCompletedCount: todayFardCompleted,
         habits,
         toggleHabit,
+        isHabitCompletedForDate,
+        toggleHabitForDate,
         tasbihCount,
         tasbihCycles,
         tasbihTodayTotal,

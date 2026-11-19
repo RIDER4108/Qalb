@@ -17,7 +17,7 @@ export function HomeStatBadges() {
         <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#E3F2ED] text-[#1D7A5C]">
           <CircleDot className="w-4 h-4 stroke-[2.5]" />
         </div>
-        <span className="mt-2 text-base font-serif font-bold text-qalb-ink dark:text-qalb-night-ink tabular-nums">
+        <span className="mt-2 text-base font-bold text-qalb-ink dark:text-qalb-night-ink tabular-nums">
           {tasbihTodayTotal.toLocaleString()}
         </span>
         <span className="text-[10px] text-qalb-muted mt-0.5 truncate max-w-full font-sans">
@@ -33,7 +33,7 @@ export function HomeStatBadges() {
         <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#FEF6E4] text-[#C28C1A]">
           <BookOpen className="w-4 h-4 stroke-[2.5]" />
         </div>
-        <span className="mt-2 text-base font-serif font-bold text-qalb-ink dark:text-qalb-night-ink tabular-nums">
+        <span className="mt-2 text-base font-bold text-qalb-ink dark:text-qalb-night-ink tabular-nums">
           {completedMorningAdhkarCount}/6
         </span>
         <span className="text-[10px] text-qalb-muted mt-0.5 truncate max-w-full font-sans">
@@ -49,7 +49,7 @@ export function HomeStatBadges() {
         <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#F3EBF9] text-[#7C3AED]">
           <Flame className="w-4 h-4 fill-current stroke-none" />
         </div>
-        <span className="mt-2 text-base font-serif font-bold text-qalb-ink dark:text-qalb-night-ink tabular-nums">
+        <span className="mt-2 text-base font-bold text-qalb-ink dark:text-qalb-night-ink tabular-nums">
           {streakDays} {streakDays === 1 ? "day" : "days"}
         </span>
         <span className="text-[10px] text-qalb-muted mt-0.5 truncate max-w-full font-sans">

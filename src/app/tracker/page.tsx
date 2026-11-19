@@ -2,15 +2,51 @@
 
 import { useState, useMemo } from "react";
 import { Flame, Check, Moon, BookOpen, Sparkles, Trophy, Calendar, CheckCircle2, Lock } from "lucide-react";
-import { useApp, getTodayKey } from "@/context/AppContext";
+import { useApp, getTodayKey, HabitStatus } from "@/context/AppContext";
+
+interface HabitDefinition {
+  key: keyof HabitStatus;
+  title: string;
+  subtitle: string;
+  icon: typeof Moon;
+  iconBg: string;
+  iconColor: string;
+}
+
+const HABIT_DEFINITIONS: HabitDefinition[] = [
+  {
+    key: "sunnah",
+    title: "Sunnah Prayers",
+    subtitle: "Duha, Tahajjud, Witr",
+    icon: Moon,
+    iconBg: "bg-[#FEF6E4] dark:bg-amber-950/30",
+    iconColor: "text-[#C28C1A] dark:text-amber-400",
+  },
+  {
+    key: "quran",
+    title: "Quran Reading",
+    subtitle: "At least 1 page",
+    icon: BookOpen,
+    iconBg: "bg-qalb-card-subtle dark:bg-qalb-night-subtle",
+    iconColor: "text-qalb-ink dark:text-qalb-night-ink",
+  },
+  {
+    key: "adhkar",
+    title: "Dhikr & Adhkar",
+    subtitle: "Morning & Evening",
+    icon: Sparkles,
+    iconBg: "bg-[#FEF6E4] dark:bg-amber-950/30",
+    iconColor: "text-[#C28C1A] dark:text-amber-400",
+  },
+];
 
 export default function TrackerPage() {
   const {
     prayers,
     isPrayerCompletedForDate,
     togglePrayerForDate,
-    habits,
-    toggleHabit,
+    isHabitCompletedForDate,
+    toggleHabitForDate,
     streakDays,
   } = useApp();
 
@@ -50,9 +86,12 @@ export default function TrackerPage() {
     isPrayerCompletedForDate(selectedDateKey, p.id)
   ).length;
 
-  const completedHabitsCount = Object.values(habits).filter(Boolean).length;
+  const completedHabitsCount = HABIT_DEFINITIONS.filter((h) =>
+    isHabitCompletedForDate(selectedDateKey, h.key)
+  ).length;
+
   const totalCompleted = completedFardCount + completedHabitsCount;
-  const totalPossible = fardPrayers.length + Object.keys(habits).length; // 5 + 3 = 8
+  const totalPossible = fardPrayers.length + HABIT_DEFINITIONS.length; // 5 + 3 = 8
   const completionPercent = totalPossible > 0 ? Math.round((totalCompleted / totalPossible) * 100) : 0;
 
   // Selected date human label
@@ -66,7 +105,7 @@ export default function TrackerPage() {
       {/* Header */}
       <header className="flex items-center justify-between pt-1 pb-1">
         <div>
-          <h1 className="text-xl font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
+          <h1 className="text-xl font-bold text-qalb-ink dark:text-qalb-night-ink tracking-tight">
             Ibadah Tracker
           </h1>
           <p className="text-xs text-qalb-muted font-sans">
@@ -109,7 +148,7 @@ export default function TrackerPage() {
                 )}
               </div>
 
-              <span className="text-base font-serif font-bold my-1">
+              <span className="text-base font-bold my-1">
                 {d.dateNum}
               </span>
 
@@ -121,7 +160,7 @@ export default function TrackerPage() {
                     className={`w-1 h-1 rounded-full ${
                       isSelected
                         ? done ? "bg-white" : "bg-white/30"
-                        : done ? "bg-emerald-600" : "bg-qalb-border"
+                        : done ? "bg-emerald-600" : "bg-qalb-border dark:bg-qalb-night-border"
                     }`}
                   />
                 ))}
@@ -135,7 +174,7 @@ export default function TrackerPage() {
       <section className="p-4 sm:p-5 rounded-2xl bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border shadow-qalb-card space-y-2.5">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-xs font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
+            <h3 className="text-xs font-bold text-qalb-ink dark:text-qalb-night-ink">
               {selectedDayLabel}
             </h3>
             <p className="text-[11px] text-qalb-muted font-sans">
@@ -143,7 +182,7 @@ export default function TrackerPage() {
             </p>
           </div>
 
-          <div className="flex items-center justify-center w-11 h-11 rounded-full border-2 border-qalb-green text-qalb-green dark:text-qalb-gold font-serif font-bold text-xs">
+          <div className="flex items-center justify-center w-11 h-11 rounded-full border-2 border-qalb-green text-qalb-green dark:text-qalb-gold font-bold text-xs">
             {completionPercent}%
           </div>
         </div>
@@ -159,7 +198,7 @@ export default function TrackerPage() {
       {/* Fard Prayers Section (Synced with live Aladhan times & Home checkboxes) */}
       <section className="space-y-2.5">
         <div className="flex items-center justify-between px-0.5">
-          <h3 className="text-xs font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
+          <h3 className="text-xs font-bold text-qalb-ink dark:text-qalb-night-ink">
             Fard Prayers
           </h3>
           <span className="text-[11px] font-bold text-qalb-green dark:text-qalb-gold">
@@ -192,11 +231,13 @@ export default function TrackerPage() {
                     <Check className="w-3.5 h-3.5 stroke-[3]" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
+                    <h4 className={`text-xs font-bold transition-colors ${
+                      isDone ? "text-qalb-ink dark:text-qalb-night-ink" : "text-qalb-ink dark:text-qalb-night-ink"
+                    }`}>
                       {prayer.nameEn}
                     </h4>
                     <p className="text-[10px] text-qalb-muted font-sans">
-                      {prayer.time24} • <span dir="rtl" className="font-indopak">{prayer.nameAr}</span>
+                      {prayer.time24} • <span dir="rtl" className="font-arabic-ui text-[11px]">{prayer.nameAr}</span>
                     </p>
                   </div>
                 </div>
@@ -205,7 +246,7 @@ export default function TrackerPage() {
                   className={`px-3 py-1 rounded-full text-[10px] font-bold ${
                     isDone
                       ? "bg-emerald-600 text-white"
-                      : "bg-qalb-card-subtle text-qalb-muted"
+                      : "bg-qalb-card-subtle dark:bg-qalb-night-subtle text-qalb-muted dark:text-qalb-night-muted"
                   }`}
                 >
                   {isDone ? "Done" : "—"}
@@ -216,102 +257,77 @@ export default function TrackerPage() {
         </div>
       </section>
 
-      {/* Sunnah & Daily Habits Section */}
+      {/* Sunnah & Daily Habits Section (Converted from toggle switches to circular task checkboxes) */}
       <section className="space-y-2.5">
-        <h3 className="text-xs font-serif font-bold text-qalb-ink dark:text-qalb-night-ink px-0.5">
-          Sunnah &amp; Daily Habits
-        </h3>
+        <div className="flex items-center justify-between px-0.5">
+          <h3 className="text-xs font-bold text-qalb-ink dark:text-qalb-night-ink">
+            Sunnah &amp; Daily Habits
+          </h3>
+          <span className="text-[11px] font-bold text-qalb-green dark:text-qalb-gold">
+            {completedHabitsCount}/3
+          </span>
+        </div>
 
         <div className="space-y-2">
-          {/* 1. Sunnah Prayers */}
-          <div className="flex items-center justify-between p-3.5 rounded-2xl border bg-qalb-card dark:bg-qalb-night-card border-qalb-border dark:border-qalb-night-border">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#FEF6E4] text-[#C28C1A]">
-                <Moon className="w-4 h-4 fill-current" />
-              </div>
-              <div>
-                <h4 className="text-xs font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
-                  Sunnah Prayers
-                </h4>
-                <p className="text-[10px] text-qalb-muted font-sans">
-                  Duha, Tahajjud, Witr
-                </p>
-              </div>
-            </div>
+          {HABIT_DEFINITIONS.map((h) => {
+            const isDone = isHabitCompletedForDate(selectedDateKey, h.key);
+            const Icon = h.icon;
 
-            <button
-              onClick={() => toggleHabit("sunnah")}
-              className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${
-                habits.sunnah ? "bg-qalb-green" : "bg-qalb-border"
-              }`}
-            >
+            return (
               <div
-                className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                  habits.sunnah ? "translate-x-5" : "translate-x-0"
+                key={h.key}
+                onClick={() => toggleHabitForDate(selectedDateKey, h.key)}
+                className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                  isDone
+                    ? "bg-[#EAF7EE] dark:bg-emerald-950/20 border-[#BCE1CE] dark:border-emerald-900/50"
+                    : "bg-qalb-card dark:bg-qalb-night-card border-qalb-border dark:border-qalb-night-border hover:border-qalb-gold/60"
                 }`}
-              />
-            </button>
-          </div>
+              >
+                <div className="flex items-center gap-3">
+                  {/* Matching circular checkbox */}
+                  <div
+                    className={`flex items-center justify-center w-6 h-6 rounded-full transition-colors ${
+                      isDone
+                        ? "bg-emerald-600 text-white"
+                        : "border border-qalb-border dark:border-qalb-night-border text-transparent"
+                    }`}
+                  >
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                  </div>
 
-          {/* 2. Quran Reading */}
-          <div className="flex items-center justify-between p-3.5 rounded-2xl border bg-qalb-card dark:bg-qalb-night-card border-qalb-border dark:border-qalb-night-border">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-qalb-card-subtle text-qalb-ink">
-                <BookOpen className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
-                  Quran Reading
-                </h4>
-                <p className="text-[10px] text-qalb-muted font-sans">
-                  At least 1 page
-                </p>
-              </div>
-            </div>
+                  {/* Habit Category Icon */}
+                  <div className={`flex items-center justify-center w-8 h-8 rounded-full ${h.iconBg} ${h.iconColor}`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
 
-            <button
-              onClick={() => toggleHabit("quran")}
-              className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${
-                habits.quran ? "bg-qalb-green" : "bg-qalb-border"
-              }`}
-            >
-              <div
-                className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                  habits.quran ? "translate-x-5" : "translate-x-0"
-                }`}
-              />
-            </button>
-          </div>
+                  <div>
+                    <h4
+                      className={`text-xs font-bold transition-all ${
+                        isDone
+                          ? "line-through text-qalb-muted dark:text-qalb-night-muted"
+                          : "text-qalb-ink dark:text-qalb-night-ink"
+                      }`}
+                    >
+                      {h.title}
+                    </h4>
+                    <p className="text-[10px] text-qalb-muted font-sans">
+                      {h.subtitle}
+                    </p>
+                  </div>
+                </div>
 
-          {/* 3. Dhikr & Adhkar */}
-          <div className="flex items-center justify-between p-3.5 rounded-2xl border bg-qalb-card dark:bg-qalb-night-card border-qalb-border dark:border-qalb-night-border">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#FEF6E4] text-[#C28C1A]">
-                <Sparkles className="w-4 h-4" />
+                <div
+                  className={`px-3 py-1 rounded-full text-[10px] font-bold ${
+                    isDone
+                      ? "bg-emerald-600 text-white"
+                      : "bg-qalb-card-subtle dark:bg-qalb-night-subtle text-qalb-muted dark:text-qalb-night-muted"
+                  }`}
+                >
+                  {isDone ? "Done" : "—"}
+                </div>
               </div>
-              <div>
-                <h4 className="text-xs font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
-                  Dhikr &amp; Adhkar
-                </h4>
-                <p className="text-[10px] text-qalb-muted font-sans">
-                  Morning &amp; Evening
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => toggleHabit("adhkar")}
-              className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${
-                habits.adhkar ? "bg-qalb-green" : "bg-qalb-border"
-              }`}
-            >
-              <div
-                className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                  habits.adhkar ? "translate-x-5" : "translate-x-0"
-                }`}
-              />
-            </button>
-          </div>
+            );
+          })}
         </div>
       </section>
 
@@ -321,7 +337,7 @@ export default function TrackerPage() {
           <div className="flex items-center justify-center w-7 h-7 mx-auto rounded-full bg-qalb-gold-subtle text-qalb-gold">
             <Calendar className="w-3.5 h-3.5" />
           </div>
-          <div className="text-sm font-serif font-bold text-qalb-ink dark:text-qalb-night-ink mt-1.5 tabular-nums">
+          <div className="text-sm font-bold text-qalb-ink dark:text-qalb-night-ink mt-1.5 tabular-nums">
             {streakDays} {streakDays === 1 ? "day" : "days"}
           </div>
           <div className="text-[10px] text-qalb-muted mt-0.5 font-sans">
@@ -333,7 +349,7 @@ export default function TrackerPage() {
           <div className="flex items-center justify-center w-7 h-7 mx-auto rounded-full bg-[#E3F2ED] text-[#1D7A5C]">
             <Trophy className="w-3.5 h-3.5" />
           </div>
-          <div className="text-sm font-serif font-bold text-qalb-ink dark:text-qalb-night-ink mt-1.5 tabular-nums">
+          <div className="text-sm font-bold text-qalb-ink dark:text-qalb-night-ink mt-1.5 tabular-nums">
             {Math.max(streakDays, streakDays > 0 ? streakDays : 0)} {streakDays === 1 ? "day" : "days"}
           </div>
           <div className="text-[10px] text-qalb-muted mt-0.5 font-sans">
@@ -345,7 +361,7 @@ export default function TrackerPage() {
           <div className="flex items-center justify-center w-7 h-7 mx-auto rounded-full bg-[#F3EBF9] text-[#7C3AED]">
             <CheckCircle2 className="w-3.5 h-3.5" />
           </div>
-          <div className="text-sm font-serif font-bold text-qalb-ink dark:text-qalb-night-ink mt-1.5 tabular-nums">
+          <div className="text-sm font-bold text-qalb-ink dark:text-qalb-night-ink mt-1.5 tabular-nums">
             {completedFardCount > 0 ? `${Math.round((completedFardCount / 5) * 100)}%` : "0%"}
           </div>
           <div className="text-[10px] text-qalb-muted mt-0.5 font-sans">

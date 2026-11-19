@@ -96,7 +96,7 @@ export function HomeHeader() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-3xl p-5 bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border shadow-xl space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-qalb-border dark:border-qalb-night-border">
-              <h3 className="text-sm font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
+              <h3 className="text-sm font-bold text-qalb-ink dark:text-qalb-night-ink">
                 Choose Location
               </h3>
               <button
@@ -159,7 +159,7 @@ export function HomeHeader() {
       {showSettingsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-3xl p-5 bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border shadow-xl space-y-4">
-            <h3 className="text-sm font-serif font-bold text-qalb-ink dark:text-qalb-night-ink pb-2 border-b border-qalb-border dark:border-qalb-night-border">
+            <h3 className="text-sm font-bold text-qalb-ink dark:text-qalb-night-ink pb-2 border-b border-qalb-border dark:border-qalb-night-border">
               Preferences &amp; Settings
             </h3>
             
@@ -194,7 +194,7 @@ export function HomeHeader() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-3xl p-5 bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div>
-              <h3 className="text-sm font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
+              <h3 className="text-sm font-bold text-qalb-ink dark:text-qalb-night-ink">
                 Prayer Reminders
               </h3>
               <p className="text-xs text-qalb-muted leading-relaxed mt-0.5">

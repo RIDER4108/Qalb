@@ -93,7 +93,7 @@ export function PrayerRibbon({ prayers }: PrayerRibbonProps) {
                   <span
                     dir="rtl"
                     lang="ar"
-                    className={`font-amiri text-xs font-medium ${
+                    className={`font-arabic-ui text-xs font-medium ${
                       isActive
                         ? "text-sacred-gold-subtle"
                         : "text-sacred-ink-secondary dark:text-sacred-night-secondary"

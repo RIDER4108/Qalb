@@ -43,13 +43,13 @@ export function NextPrayerCard() {
             NEXT PRAYER • {nextPrayer.nameEn.toUpperCase()}
           </span>
           <div className="flex items-baseline gap-2 mt-0.5">
-            <span className="text-2xl font-serif font-bold text-qalb-ink dark:text-qalb-night-ink tracking-tight">
+            <span className="text-2xl font-bold text-qalb-ink dark:text-qalb-night-ink tracking-tight">
               {nextPrayer.time24}
             </span>
             <span
               dir="rtl"
               lang="ar"
-              className="font-indopak text-lg font-bold text-qalb-muted"
+              className="font-arabic-ui text-base font-semibold text-qalb-muted"
             >
               {nextPrayer.nameAr}
             </span>

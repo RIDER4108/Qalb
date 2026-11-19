@@ -90,7 +90,7 @@ export default function TasbihPage() {
       {/* Header */}
       <header className="flex items-center justify-between pt-1 pb-1">
         <div>
-          <h1 className="text-xl font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
+          <h1 className="text-xl font-bold text-qalb-ink dark:text-qalb-night-ink">
             Tasbih
           </h1>
           <p className="text-xs text-qalb-muted font-sans">
@@ -141,7 +141,7 @@ export default function TasbihPage() {
               <span
                 dir="rtl"
                 lang="ar"
-                className={`font-indopak text-xs font-semibold leading-[2.0] ${
+                className={`font-quran text-xs font-semibold leading-[2.0] ${
                   isSelected ? "text-white" : "text-qalb-ink dark:text-qalb-night-ink"
                 }`}
               >
@@ -168,16 +168,16 @@ export default function TasbihPage() {
           </span>
         </div>
 
-        {/* Arabic Dhikr Text in IndoPak font */}
+        {/* Arabic Dhikr Text in Scheherazade New font */}
         <div className="space-y-1">
           <div
             dir="rtl"
             lang="ar"
-            className="font-indopak text-3xl sm:text-4xl font-bold text-qalb-green dark:text-qalb-gold py-1"
+            className="font-quran text-3xl sm:text-4xl font-bold text-qalb-green dark:text-qalb-gold py-1 leading-[2.2]"
           >
             {selectedPreset.arabic}
           </div>
-          <p className="text-xs text-qalb-muted font-serif">
+          <p className="text-xs text-qalb-muted font-sans">
             {selectedPreset.meaning}
           </p>
         </div>
@@ -219,7 +219,7 @@ export default function TasbihPage() {
 
             {/* Decluttered Inside: Only current cycle count */}
             <div className="relative z-10 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-5xl sm:text-6xl font-serif font-bold text-qalb-ink dark:text-qalb-night-ink tracking-tight tabular-nums">
+              <span className="text-5xl sm:text-6xl font-bold text-qalb-ink dark:text-qalb-night-ink tracking-tight tabular-nums">
                 {tasbihCount}
               </span>
               <span className="text-xs font-semibold text-qalb-muted font-sans mt-0.5">
@@ -286,7 +286,7 @@ export default function TasbihPage() {
           <span className="text-[10px] font-bold uppercase tracking-wider text-qalb-muted">
             TODAY'S TOTAL
           </span>
-          <div className="text-xl font-serif font-bold text-qalb-ink dark:text-qalb-night-ink tabular-nums">
+          <div className="text-xl font-bold text-qalb-ink dark:text-qalb-night-ink tabular-nums">
             {tasbihTodayTotal.toLocaleString()}
           </div>
           <div className="w-full h-1.5 rounded-full bg-qalb-card-subtle dark:bg-qalb-night-subtle overflow-hidden">
@@ -301,7 +301,7 @@ export default function TasbihPage() {
           <span className="text-[10px] font-bold uppercase tracking-wider text-qalb-muted">
             WEEKLY GOAL
           </span>
-          <div className="text-xl font-serif font-bold text-qalb-ink dark:text-qalb-night-ink tabular-nums">
+          <div className="text-xl font-bold text-qalb-ink dark:text-qalb-night-ink tabular-nums">
             5,000
           </div>
           <div className="w-full h-1.5 rounded-full bg-qalb-card-subtle dark:bg-qalb-night-subtle overflow-hidden">
@@ -316,7 +316,7 @@ export default function TasbihPage() {
       {/* "This Week" Bar Chart Card */}
       <section className="p-4 sm:p-5 rounded-2xl bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border shadow-qalb-card space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-xs font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
+          <h3 className="text-xs font-bold text-qalb-ink dark:text-qalb-night-ink">
             This Week
           </h3>
           <span className="text-[10px] text-qalb-muted">
@@ -351,7 +351,7 @@ export default function TasbihPage() {
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-3xl p-5 bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border shadow-xl space-y-3">
-            <h3 className="text-sm font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
+            <h3 className="text-sm font-bold text-qalb-ink dark:text-qalb-night-ink">
               Add Custom Dhikr
             </h3>
             <input
@@ -360,7 +360,7 @@ export default function TasbihPage() {
               dir="rtl"
               value={newArabic}
               onChange={(e) => setNewArabic(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl border bg-qalb-card-subtle border-qalb-border outline-none font-indopak"
+              className="w-full px-3 py-2 text-xs rounded-xl border bg-qalb-card-subtle border-qalb-border outline-none font-quran leading-[2.0]"
             />
             <input
               type="text"

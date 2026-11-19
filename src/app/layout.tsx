@@ -1,20 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans, Playfair_Display } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/context/AppContext";
 import { BottomNav } from "@/components/BottomNav";
 import { FloatingDuasButton } from "@/components/FloatingDuasButton";
 
-const playfair = Playfair_Display({
-  weight: ["600", "700", "800"],
-  subsets: ["latin"],
-  variable: "--font-serif",
-  display: "swap",
-});
-
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-sans",
+  weight: ["400", "500", "600", "700", "800"],
   display: "swap",
 });
 
@@ -56,7 +50,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Scheherazade+New:wght@400;600;700&display=swap"
           rel="stylesheet"
         />
         <script
@@ -74,7 +68,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${playfair.variable} ${plusJakarta.variable} font-sans min-h-screen bg-qalb-bg dark:bg-qalb-night-bg text-qalb-ink dark:text-qalb-night-ink antialiased selection:bg-qalb-gold/30 selection:text-current transition-colors duration-200`}
+        className={`${plusJakarta.variable} font-sans min-h-screen bg-qalb-bg dark:bg-qalb-night-bg text-qalb-ink dark:text-qalb-night-ink antialiased selection:bg-qalb-gold/30 selection:text-current transition-colors duration-200`}
       >
         <AppProvider>
           <div className="mx-auto max-w-lg min-h-screen flex flex-col px-4 pt-3 pb-28">

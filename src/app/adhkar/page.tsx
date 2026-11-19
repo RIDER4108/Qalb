@@ -44,7 +44,7 @@ export default function AdhkarPage() {
       {/* Header */}
       <header className="flex items-center justify-between pt-1 pb-1">
         <div>
-          <h1 className="text-xl font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
+          <h1 className="text-xl font-bold text-qalb-ink dark:text-qalb-night-ink">
             Adhkar
           </h1>
           <p className="text-xs text-qalb-muted font-sans">
@@ -85,7 +85,7 @@ export default function AdhkarPage() {
       {/* Progress Bar Card */}
       <section className="p-4 rounded-2xl bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border shadow-qalb-card space-y-2">
         <div className="flex items-center justify-between text-xs">
-          <span className="font-serif font-bold text-qalb-ink dark:text-qalb-night-ink capitalize">
+          <span className="font-bold text-qalb-ink dark:text-qalb-night-ink capitalize">
             {activeCategory} Adhkar Progress
           </span>
           <span className="font-bold text-qalb-green dark:text-qalb-gold tabular-nums">
@@ -145,19 +145,19 @@ export default function AdhkarPage() {
                 </div>
               </div>
 
-              {/* Arabic Scripture in IndoPak Nastaliq font with generous line-height */}
+              {/* Arabic Scripture in Scheherazade New font with generous line-height */}
               <div className="py-4">
                 <p
                   dir="rtl"
                   lang="ar"
-                  className="font-indopak text-2xl sm:text-3xl text-qalb-ink dark:text-qalb-night-ink leading-[2.3] text-right"
+                  className="font-quran text-2xl sm:text-3xl text-qalb-ink dark:text-qalb-night-ink leading-[2.3] text-right"
                 >
                   {item.arabic}
                 </p>
               </div>
 
               {/* Transliteration */}
-              <p className="text-xs italic font-serif text-qalb-gold leading-relaxed">
+              <p className="text-xs italic text-qalb-gold font-sans leading-relaxed">
                 {item.transliteration}
               </p>
 

@@ -60,7 +60,7 @@ export function PrayerHero({ timings, hijriDate, onScheduleUpdate }: PrayerHeroP
         <div
           dir="rtl"
           lang="ar"
-          className="font-amiri text-sm font-semibold text-sacred-gold tracking-wide leading-none"
+          className="font-arabic-ui text-sm font-semibold text-sacred-gold tracking-wide leading-none"
         >
           {hijriDate.day} {hijriDate.month.ar} {hijriDate.year} هـ
         </div>
@@ -80,7 +80,7 @@ export function PrayerHero({ timings, hijriDate, onScheduleUpdate }: PrayerHeroP
               <span
                 dir="rtl"
                 lang="ar"
-                className="font-amiri text-2xl sm:text-3xl text-sacred-gold font-bold leading-none"
+                className="font-arabic-ui text-2xl sm:text-3xl text-sacred-gold font-bold leading-none"
               >
                 {nextPrayer.nameAr}
               </span>

@@ -55,7 +55,7 @@ export function DuasModal({ isOpen, onClose }: DuasModalProps) {
               <Heart className="w-4 h-4 fill-current" />
             </div>
             <div>
-              <h2 className="text-base font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
+              <h2 className="text-base font-bold text-qalb-ink dark:text-qalb-night-ink">
                 Essential Duas
               </h2>
               <p className="text-[11px] text-qalb-muted font-sans">
@@ -130,14 +130,14 @@ export function DuasModal({ isOpen, onClose }: DuasModalProps) {
                   <p
                     dir="rtl"
                     lang="ar"
-                    className="font-indopak text-xl sm:text-2xl text-qalb-ink dark:text-qalb-night-ink leading-[2.3] text-right"
+                    className="font-quran text-xl sm:text-2xl text-qalb-ink dark:text-qalb-night-ink leading-[2.3] text-right"
                   >
                     {item.arabic}
                   </p>
                 </div>
 
                 {/* Transliteration */}
-                <p className="text-xs italic text-qalb-gold font-serif">
+                <p className="text-xs italic text-qalb-gold font-sans">
                   {item.transliteration}
                 </p>
 

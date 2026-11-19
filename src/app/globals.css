@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Scheherazade+New:wght@400;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -27,6 +27,7 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     min-height: 100vh;
+    font-family: var(--font-sans), 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   }
 
   ::selection {
@@ -39,10 +40,16 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* IndoPak Nastaliq style Arabic rules */
-  .font-indopak, .font-amiri, [dir="rtl"][lang="ar"] {
-    font-family: 'Noto Nastaliq Urdu', 'Amiri', 'Scheherazade New', serif;
+  /* Scripture typography: Scheherazade New with generous line-height */
+  .font-quran, [data-scripture="quran"] {
+    font-family: 'Scheherazade New', 'Amiri', serif;
     line-height: 2.2 !important;
+  }
+
+  /* Small Arabic UI labels: Noto Naskh Arabic */
+  .font-arabic-ui, [data-arabic-ui="true"] {
+    font-family: 'Noto Naskh Arabic', system-ui, sans-serif;
+    line-height: 1.5;
   }
 }
 

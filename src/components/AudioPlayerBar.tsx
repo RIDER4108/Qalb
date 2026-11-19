@@ -81,7 +81,7 @@ export function AudioPlayerBar({
         {/* Top Info Row */}
         <div className="flex items-center justify-between">
           <div className="truncate pr-2">
-            <h4 className="text-xs sm:text-sm font-serif font-bold text-qalb-ink dark:text-qalb-night-ink truncate">
+            <h4 className="text-xs sm:text-sm font-bold text-qalb-ink dark:text-qalb-night-ink truncate">
               {surahName}
             </h4>
             <p className="text-[11px] text-qalb-gold font-medium truncate font-sans">

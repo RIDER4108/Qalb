@@ -40,23 +40,23 @@ colors:
   status-streak: "#7C3AED"
 
 typography:
-  display-serif:
-    fontFamily: "'Playfair Display', 'Newsreader', Georgia, serif"
+  display-heading:
+    fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif"
     fontSize: "1.5rem"
     fontWeight: 700
     lineHeight: 1.2
-    letterSpacing: "-0.01em"
+    letterSpacing: "-0.02em"
   arabic-scripture:
-    fontFamily: "'Amiri', 'Scheherazade New', serif"
+    fontFamily: "'Scheherazade New', 'Amiri', serif"
     fontSize: "1.75rem"
     fontWeight: 400
     lineHeight: 2.2
     letterSpacing: "0em"
-  arabic-title:
-    fontFamily: "'Amiri', 'Scheherazade New', serif"
-    fontSize: "2rem"
-    fontWeight: 700
-    lineHeight: 1.8
+  arabic-ui-labels:
+    fontFamily: "'Noto Naskh Arabic', system-ui, sans-serif"
+    fontSize: "0.85rem"
+    fontWeight: 600
+    lineHeight: 1.5
     letterSpacing: "0em"
   latin-body:
     fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif"
@@ -69,7 +69,7 @@ typography:
     fontSize: "0.75rem"
     fontWeight: 600
     lineHeight: 1.3
-    letterSpacing: "0.04em"
+    letterSpacing: "0.02em"
 
 rounded:
   sm: "8px"

@@ -73,7 +73,7 @@ export default function QiblaPage() {
       {/* Header */}
       <header className="flex items-center justify-between pt-1 pb-1">
         <div>
-          <h1 className="text-xl font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
+          <h1 className="text-xl font-bold text-qalb-ink dark:text-qalb-night-ink">
             Qibla Finder
           </h1>
           <p className="text-xs text-qalb-muted font-sans">
@@ -138,7 +138,7 @@ export default function QiblaPage() {
           {/* Center Display: Heading */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="w-20 h-20 rounded-full bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border shadow-md flex flex-col items-center justify-center">
-              <span className="text-lg font-serif font-bold text-qalb-ink dark:text-qalb-night-ink tabular-nums">
+              <span className="text-lg font-bold text-qalb-ink dark:text-qalb-night-ink tabular-nums">
                 {heading}°
               </span>
               <span className="text-[9px] uppercase tracking-wider font-bold text-qalb-muted">
@@ -166,7 +166,7 @@ export default function QiblaPage() {
             <span className="text-[9px] font-bold uppercase tracking-wider text-qalb-muted font-sans">
               DISTANCE TO KAABA
             </span>
-            <div className="text-sm font-serif font-bold text-qalb-ink dark:text-qalb-night-ink mt-0.5 tabular-nums">
+            <div className="text-sm font-bold text-qalb-ink dark:text-qalb-night-ink mt-0.5 tabular-nums">
               {distanceKm.toLocaleString()} km
             </div>
           </div>
@@ -175,7 +175,7 @@ export default function QiblaPage() {
             <span className="text-[9px] font-bold uppercase tracking-wider text-qalb-muted font-sans">
               YOUR LOCATION
             </span>
-            <div className="text-sm font-serif font-bold text-qalb-ink dark:text-qalb-night-ink mt-0.5 tabular-nums truncate">
+            <div className="text-sm font-bold text-qalb-ink dark:text-qalb-night-ink mt-0.5 tabular-nums truncate">
               {coordsStr}
             </div>
           </div>
@@ -185,7 +185,7 @@ export default function QiblaPage() {
       {/* Manual Compass Adjust Slider Card */}
       <section className="p-4 sm:p-5 rounded-2xl bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border shadow-qalb-card space-y-3">
         <div className="flex items-center justify-between text-xs">
-          <span className="font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
+          <span className="font-bold text-qalb-ink dark:text-qalb-night-ink">
             Manual Adjust
           </span>
           <span className="font-bold text-qalb-gold tabular-nums">{heading.toFixed(1)}°</span>
@@ -219,7 +219,7 @@ export default function QiblaPage() {
 
       {/* Accuracy Instructions */}
       <section className="p-5 rounded-2xl bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border shadow-qalb-card space-y-3">
-        <h3 className="text-xs font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
+        <h3 className="text-xs font-bold text-qalb-ink dark:text-qalb-night-ink">
           How to find Qibla accurately
         </h3>
 

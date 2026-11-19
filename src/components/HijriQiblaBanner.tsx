@@ -45,7 +45,7 @@ export function HijriQiblaBanner() {
           <span className="text-[10px] font-bold uppercase tracking-widest text-[#B5D4C7] font-sans">
             TODAY • HIJRI DATE
           </span>
-          <h2 className="text-xl sm:text-2xl font-serif font-bold text-white tracking-tight leading-snug">
+          <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight leading-snug">
             {hijriDate.day} {hijriDate.month.en} {hijriDate.year}
           </h2>
           <p className="text-xs text-white/70 font-sans">
