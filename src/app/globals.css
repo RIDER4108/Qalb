@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-surface: #FAF7F2;
+    --text-primary: #1C2421;
+    --text-secondary: #5C6762;
+    --accent-emerald: #144534;
+    --accent-gold: #C5A059;
+  }
+
+  .dark {
+    --bg-surface: #0C1310;
+    --text-primary: #F4F7F5;
+    --text-secondary: #A7B5AE;
+    --accent-emerald: #164E3D;
+    --accent-gold: #DFBA75;
+  }
+
+  body {
+    background-color: var(--bg-surface);
+    color: var(--text-primary);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+  }
+
+  /* Custom selection color */
+  ::selection {
+    background-color: rgba(197, 160, 89, 0.35);
+    color: inherit;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Custom delicate scrollbars */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(197, 160, 89, 0.25);
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(197, 160, 89, 0.45);
+}
+
+/* Safe area inset paddings for mobile PWAs */
+.safe-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.safe-top {
+  padding-top: max(1rem, env(safe-area-inset-top));
+}

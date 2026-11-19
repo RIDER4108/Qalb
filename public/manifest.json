@@ -1,0 +1,18 @@
+{
+  "name": "Nur — Islamic Companion",
+  "short_name": "Nur",
+  "description": "Daily Prayer Times, Hijri Date, and Clean Quran Reader",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0C1310",
+  "theme_color": "#144534",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

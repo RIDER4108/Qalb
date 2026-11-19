@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="emeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#195440" />
+      <stop offset="100%" stop-color="#0E3326" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#DFBA75" />
+      <stop offset="100%" stop-color="#B38F48" />
+    </linearGradient>
+  </defs>
+  <!-- Background Rounded Rect -->
+  <rect width="512" height="512" rx="128" fill="url(#emeraldGrad)" />
+  <!-- Outer Decorative Ring -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="url(#goldGrad)" stroke-width="3" opacity="0.4" />
+  <circle cx="256" cy="256" r="160" fill="none" stroke="url(#goldGrad)" stroke-width="1.5" stroke-dasharray="6 6" opacity="0.6" />
+  
+  <!-- Islamic Eight-Point Star (Rub el Hizb) Center Motif -->
+  <g transform="translate(256 256) scale(1.15)">
+    <!-- Square 1 -->
+    <rect x="-65" y="-65" width="130" height="130" rx="12" fill="none" stroke="url(#goldGrad)" stroke-width="8" />
+    <!-- Square 2 rotated 45 deg -->
+    <rect x="-65" y="-65" width="130" height="130" rx="12" transform="rotate(45)" fill="none" stroke="url(#goldGrad)" stroke-width="8" />
+    <!-- Inner Golden Circle with Crescent -->
+    <circle cx="0" cy="0" r="42" fill="url(#goldGrad)" opacity="0.15" />
+    <circle cx="0" cy="0" r="14" fill="url(#goldGrad)" />
+  </g>
+</svg>
