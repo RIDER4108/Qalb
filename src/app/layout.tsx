@@ -13,7 +13,7 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Qalb — Islamic Companion",
+  title: "Qalb - Prayer, Quran & Dhikr",
   description: "Live Prayer Times, Hijri Date, Quran Reader, Tasbih, Adhkar, Qibla, and Ibadah Tracker",
   manifest: "/manifest.json",
   appleWebApp: {
