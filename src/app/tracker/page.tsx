@@ -1,80 +1,65 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Flame, Check, Minus, Moon, BookOpen, Sparkles, Trophy, Calendar, CheckCircle2, Lock } from "lucide-react";
-
-interface PrayerStatus {
-  id: string;
-  name: string;
-  time: string;
-  arabic: string;
-  done: boolean;
-}
+import { useState, useMemo } from "react";
+import { Flame, Check, Moon, BookOpen, Sparkles, Trophy, Calendar, CheckCircle2, Lock } from "lucide-react";
+import { useApp, getTodayKey } from "@/context/AppContext";
 
 export default function TrackerPage() {
-  const [selectedDayIndex, setSelectedDayIndex] = useState(2); // Wednesday 18 selected by default
-  const [fardPrayers, setFardPrayers] = useState<PrayerStatus[]>([
-    { id: "fajr", name: "Fajr", time: "05:12", arabic: "الفجر", done: true },
-    { id: "dhuhr", name: "Dhuhr", time: "12:24", arabic: "الظهر", done: false },
-    { id: "asr", name: "Asr", time: "15:42", arabic: "العصر", done: false },
-    { id: "maghrib", name: "Maghrib", time: "18:08", arabic: "المغرب", done: false },
-    { id: "isha", name: "Isha", time: "19:34", arabic: "العشاء", done: false },
-  ]);
+  const {
+    prayers,
+    isPrayerCompletedForDate,
+    togglePrayerForDate,
+    habits,
+    toggleHabit,
+    streakDays,
+  } = useApp();
 
-  const [habits, setHabits] = useState({
-    sunnah: true,
-    quran: false,
-    adhkar: true,
-  });
+  const todayKey = getTodayKey();
 
-  const [streakDays, setStreakDays] = useState(12);
-
-  // Load from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("qalb-tracker-data");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed.fard) setFardPrayers(parsed.fard);
-        if (parsed.habits) setHabits(parsed.habits);
-      } catch (e) {}
+  // Generate 6 days ending on tomorrow or centered on today
+  const weekDays = useMemo(() => {
+    const list: { dayName: string; dateNum: number; dateKey: string; isToday: boolean }[] = [];
+    const now = new Date();
+    // 4 days prior, today, 1 day after
+    for (let i = -4; i <= 1; i++) {
+      const d = new Date(now);
+      d.setDate(d.getDate() + i);
+      const dayName = d.toLocaleDateString("en-US", { weekday: "short" });
+      const dateNum = d.getDate();
+      const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+        d.getDate()
+      ).padStart(2, "0")}`;
+      list.push({
+        dayName,
+        dateNum,
+        dateKey,
+        isToday: dateKey === todayKey,
+      });
     }
-  }, []);
+    return list;
+  }, [todayKey]);
 
-  const saveTracker = (fard: PrayerStatus[], h: typeof habits) => {
-    localStorage.setItem("qalb-tracker-data", JSON.stringify({ fard, habits: h }));
-  };
+  const [selectedDateKey, setSelectedDateKey] = useState<string>(todayKey);
 
-  const toggleFard = (id: string) => {
-    const updated = fardPrayers.map((p) => (p.id === id ? { ...p, done: !p.done } : p));
-    setFardPrayers(updated);
-    saveTracker(updated, habits);
-    if (typeof navigator !== "undefined" && navigator.vibrate) {
-      navigator.vibrate(20);
-    }
-  };
+  // Fard prayers (excluding Sunrise)
+  const fardPrayers = useMemo(() => {
+    return prayers.filter((p) => p.id !== "Sunrise");
+  }, [prayers]);
 
-  const toggleHabit = (key: keyof typeof habits) => {
-    const updated = { ...habits, [key]: !habits[key] };
-    setHabits(updated);
-    saveTracker(fardPrayers, updated);
-  };
+  const completedFardCount = fardPrayers.filter((p) =>
+    isPrayerCompletedForDate(selectedDateKey, p.id)
+  ).length;
 
-  const completedFard = fardPrayers.filter((p) => p.done).length;
-  const completedHabits = Object.values(habits).filter(Boolean).length;
-  const totalCompleted = completedFard + completedHabits;
-  const totalItems = fardPrayers.length + Object.keys(habits).length; // 5 + 3 = 8
-  const completionPercent = Math.round((totalCompleted / totalItems) * 100);
+  const completedHabitsCount = Object.values(habits).filter(Boolean).length;
+  const totalCompleted = completedFardCount + completedHabitsCount;
+  const totalPossible = fardPrayers.length + Object.keys(habits).length; // 5 + 3 = 8
+  const completionPercent = totalPossible > 0 ? Math.round((totalCompleted / totalPossible) * 100) : 0;
 
-  // 6 Days in week strip matching screenshot
-  const days = [
-    { dayName: "Mon", dateNum: 16, dots: [true, true, true, true, false] },
-    { dayName: "Tue", dateNum: 17, dots: [true, true, true, true, true] },
-    { dayName: "Wed", dateNum: 18, dots: [true, true, true, true, false] },
-    { dayName: "Thu", dateNum: 19, dots: [true, true, false, false, false] },
-    { dayName: "Fri", dateNum: 20, dots: [false, false, false, false, false] },
-    { dayName: "Sat", dateNum: 21, dots: [false, false, false, false, false] },
-  ];
+  // Selected date human label
+  const selectedDateObj = new Date(selectedDateKey + "T00:00:00");
+  const selectedDayLabel = selectedDateKey === todayKey
+    ? `Today (${selectedDateObj.toLocaleDateString("en-US", { weekday: "long" })})`
+    : selectedDateObj.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
 
   return (
     <main className="space-y-4">
@@ -89,43 +74,54 @@ export default function TrackerPage() {
           </p>
         </div>
 
-        {/* Streak Badge */}
+        {/* Real Dynamic Streak Badge */}
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-qalb-green dark:bg-qalb-green-dark text-white text-xs font-bold font-sans shadow-sm">
           <Flame className="w-3.5 h-3.5 fill-current text-qalb-gold" />
-          <span>{streakDays} days</span>
+          <span>{streakDays} {streakDays === 1 ? "day" : "days"}</span>
         </div>
       </header>
 
-      {/* 6-Day Horizontal Date Strip */}
+      {/* Dynamic Date Strip centered on Today */}
       <div className="grid grid-cols-6 gap-1.5">
-        {days.map((d, index) => {
-          const isSelected = selectedDayIndex === index;
+        {weekDays.map((d) => {
+          const isSelected = selectedDateKey === d.dateKey;
+          // Count completed prayers for this day to show 5 dots
+          const dayFardPrayed = ["fajr", "dhuhr", "asr", "maghrib", "isha"].map((name) =>
+            isPrayerCompletedForDate(d.dateKey, name)
+          );
+
           return (
             <button
-              key={d.dateNum}
-              onClick={() => setSelectedDayIndex(index)}
+              key={d.dateKey}
+              onClick={() => setSelectedDateKey(d.dateKey)}
               className={`flex flex-col items-center justify-between py-2.5 px-1 rounded-2xl border transition-all text-center ${
                 isSelected
                   ? "bg-qalb-green text-white border-qalb-green shadow-sm"
                   : "bg-qalb-card dark:bg-qalb-night-card border-qalb-border dark:border-qalb-night-border text-qalb-ink dark:text-qalb-night-ink hover:border-qalb-gold/60"
               }`}
             >
-              <span className={`text-[10px] font-sans ${isSelected ? "text-white/80" : "text-qalb-muted"}`}>
-                {d.dayName}
-              </span>
+              <div className="flex items-center gap-1">
+                <span className={`text-[10px] font-sans ${isSelected ? "text-white/80" : "text-qalb-muted"}`}>
+                  {d.dayName}
+                </span>
+                {d.isToday && (
+                  <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-qalb-gold" : "bg-qalb-green"}`} />
+                )}
+              </div>
+
               <span className="text-base font-serif font-bold my-1">
                 {d.dateNum}
               </span>
 
-              {/* 5 Prayer dots */}
+              {/* 5 Prayer Dots */}
               <div className="flex items-center gap-0.5 mt-1">
-                {d.dots.map((dot, i) => (
+                {dayFardPrayed.map((done, i) => (
                   <span
                     key={i}
                     className={`w-1 h-1 rounded-full ${
                       isSelected
-                        ? dot ? "bg-white" : "bg-white/30"
-                        : dot ? "bg-emerald-600" : "bg-qalb-border"
+                        ? done ? "bg-white" : "bg-white/30"
+                        : done ? "bg-emerald-600" : "bg-qalb-border"
                     }`}
                   />
                 ))}
@@ -135,15 +131,15 @@ export default function TrackerPage() {
         })}
       </div>
 
-      {/* Today's Ibadah Progress Card */}
+      {/* Progress Card */}
       <section className="p-4 sm:p-5 rounded-2xl bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border shadow-qalb-card space-y-2.5">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-xs font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
-              Today's Ibadah
+              {selectedDayLabel}
             </h3>
-            <p className="text-[11px] text-qalb-muted">
-              Thursday • {totalCompleted}/{totalItems} completed
+            <p className="text-[11px] text-qalb-muted font-sans">
+              {totalCompleted}/{totalPossible} completed
             </p>
           </div>
 
@@ -160,59 +156,63 @@ export default function TrackerPage() {
         </div>
       </section>
 
-      {/* Fard Prayers Section (1/5) */}
+      {/* Fard Prayers Section (Synced with live Aladhan times & Home checkboxes) */}
       <section className="space-y-2.5">
         <div className="flex items-center justify-between px-0.5">
           <h3 className="text-xs font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
             Fard Prayers
           </h3>
           <span className="text-[11px] font-bold text-qalb-green dark:text-qalb-gold">
-            {completedFard}/5
+            {completedFardCount}/5
           </span>
         </div>
 
         <div className="space-y-2">
-          {fardPrayers.map((prayer) => (
-            <div
-              key={prayer.id}
-              onClick={() => toggleFard(prayer.id)}
-              className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer ${
-                prayer.done
-                  ? "bg-[#EAF7EE] dark:bg-emerald-950/20 border-[#BCE1CE] dark:border-emerald-900/50"
-                  : "bg-qalb-card dark:bg-qalb-night-card border-qalb-border dark:border-qalb-night-border hover:border-qalb-gold/60"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className={`flex items-center justify-center w-6 h-6 rounded-full transition-colors ${
-                    prayer.done
-                      ? "bg-emerald-600 text-white"
-                      : "border border-qalb-border dark:border-qalb-night-border text-transparent"
-                  }`}
-                >
-                  <Check className="w-3.5 h-3.5 stroke-[3]" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
-                    {prayer.name}
-                  </h4>
-                  <p className="text-[10px] text-qalb-muted font-sans">
-                    {prayer.time} • <span dir="rtl" className="font-amiri">{prayer.arabic}</span>
-                  </p>
-                </div>
-              </div>
+          {fardPrayers.map((prayer) => {
+            const isDone = isPrayerCompletedForDate(selectedDateKey, prayer.id);
 
+            return (
               <div
-                className={`px-3 py-1 rounded-full text-[10px] font-bold ${
-                  prayer.done
-                    ? "bg-emerald-600 text-white"
-                    : "bg-qalb-card-subtle text-qalb-muted"
+                key={prayer.id}
+                onClick={() => togglePrayerForDate(selectedDateKey, prayer.id)}
+                className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                  isDone
+                    ? "bg-[#EAF7EE] dark:bg-emerald-950/20 border-[#BCE1CE] dark:border-emerald-900/50"
+                    : "bg-qalb-card dark:bg-qalb-night-card border-qalb-border dark:border-qalb-night-border hover:border-qalb-gold/60"
                 }`}
               >
-                {prayer.done ? "Done" : "—"}
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`flex items-center justify-center w-6 h-6 rounded-full transition-colors ${
+                      isDone
+                        ? "bg-emerald-600 text-white"
+                        : "border border-qalb-border dark:border-qalb-night-border text-transparent"
+                    }`}
+                  >
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
+                      {prayer.nameEn}
+                    </h4>
+                    <p className="text-[10px] text-qalb-muted font-sans">
+                      {prayer.time24} • <span dir="rtl" className="font-indopak">{prayer.nameAr}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div
+                  className={`px-3 py-1 rounded-full text-[10px] font-bold ${
+                    isDone
+                      ? "bg-emerald-600 text-white"
+                      : "bg-qalb-card-subtle text-qalb-muted"
+                  }`}
+                >
+                  {isDone ? "Done" : "—"}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -233,7 +233,7 @@ export default function TrackerPage() {
                 <h4 className="text-xs font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
                   Sunnah Prayers
                 </h4>
-                <p className="text-[10px] text-qalb-muted">
+                <p className="text-[10px] text-qalb-muted font-sans">
                   Duha, Tahajjud, Witr
                 </p>
               </div>
@@ -263,7 +263,7 @@ export default function TrackerPage() {
                 <h4 className="text-xs font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
                   Quran Reading
                 </h4>
-                <p className="text-[10px] text-qalb-muted">
+                <p className="text-[10px] text-qalb-muted font-sans">
                   At least 1 page
                 </p>
               </div>
@@ -293,7 +293,7 @@ export default function TrackerPage() {
                 <h4 className="text-xs font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
                   Dhikr &amp; Adhkar
                 </h4>
-                <p className="text-[10px] text-qalb-muted">
+                <p className="text-[10px] text-qalb-muted font-sans">
                   Morning &amp; Evening
                 </p>
               </div>
@@ -315,16 +315,16 @@ export default function TrackerPage() {
         </div>
       </section>
 
-      {/* 3 Streak & Summary Metric Cards (Screenshot 11) */}
+      {/* Summary Metrics (Synced, real numbers) */}
       <section className="grid grid-cols-3 gap-2.5">
         <div className="p-3.5 rounded-2xl bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border text-center">
           <div className="flex items-center justify-center w-7 h-7 mx-auto rounded-full bg-qalb-gold-subtle text-qalb-gold">
             <Calendar className="w-3.5 h-3.5" />
           </div>
           <div className="text-sm font-serif font-bold text-qalb-ink dark:text-qalb-night-ink mt-1.5 tabular-nums">
-            12 days
+            {streakDays} {streakDays === 1 ? "day" : "days"}
           </div>
-          <div className="text-[10px] text-qalb-muted mt-0.5">
+          <div className="text-[10px] text-qalb-muted mt-0.5 font-sans">
             Current streak
           </div>
         </div>
@@ -334,9 +334,9 @@ export default function TrackerPage() {
             <Trophy className="w-3.5 h-3.5" />
           </div>
           <div className="text-sm font-serif font-bold text-qalb-ink dark:text-qalb-night-ink mt-1.5 tabular-nums">
-            28 days
+            {Math.max(streakDays, streakDays > 0 ? streakDays : 0)} {streakDays === 1 ? "day" : "days"}
           </div>
-          <div className="text-[10px] text-qalb-muted mt-0.5">
+          <div className="text-[10px] text-qalb-muted mt-0.5 font-sans">
             Best streak
           </div>
         </div>
@@ -346,15 +346,15 @@ export default function TrackerPage() {
             <CheckCircle2 className="w-3.5 h-3.5" />
           </div>
           <div className="text-sm font-serif font-bold text-qalb-ink dark:text-qalb-night-ink mt-1.5 tabular-nums">
-            87%
+            {completedFardCount > 0 ? `${Math.round((completedFardCount / 5) * 100)}%` : "0%"}
           </div>
-          <div className="text-[10px] text-qalb-muted mt-0.5">
-            This month
+          <div className="text-[10px] text-qalb-muted mt-0.5 font-sans">
+            Today
           </div>
         </div>
       </section>
 
-      {/* Privacy Reassurance Banner */}
+      {/* Privacy Notice */}
       <section className="flex items-center gap-2.5 p-3.5 rounded-2xl border bg-qalb-card dark:bg-qalb-night-card border-qalb-border dark:border-qalb-night-border text-xs text-qalb-muted">
         <Lock className="w-4 h-4 text-qalb-green shrink-0" />
         <p className="text-[11px] leading-relaxed">

@@ -2,30 +2,24 @@
 
 import { useEffect, useState } from "react";
 import { Clock } from "lucide-react";
-import { PrayerItem, PrayerTimings } from "@/types/prayer";
+import { useApp } from "@/context/AppContext";
 import { computePrayerSchedule, NextPrayerComputation } from "@/services/aladhan";
 
-interface NextPrayerCardProps {
-  timings: PrayerTimings;
-  onScheduleUpdate?: (prayers: PrayerItem[]) => void;
-}
-
-export function NextPrayerCard({ timings, onScheduleUpdate }: NextPrayerCardProps) {
+export function NextPrayerCard() {
+  const { prayerTimings } = useApp();
   const [computation, setComputation] = useState<NextPrayerComputation | null>(null);
 
   useEffect(() => {
+    if (!prayerTimings) return;
     const update = () => {
-      const schedule = computePrayerSchedule(timings);
+      const schedule = computePrayerSchedule(prayerTimings);
       setComputation(schedule.nextPrayerInfo);
-      if (onScheduleUpdate) {
-        onScheduleUpdate(schedule.prayers);
-      }
     };
 
     update();
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, [timings, onScheduleUpdate]);
+  }, [prayerTimings]);
 
   if (!computation) {
     return (
@@ -35,7 +29,6 @@ export function NextPrayerCard({ timings, onScheduleUpdate }: NextPrayerCardProp
 
   const { nextPrayer, secondsRemaining, progressPercent } = computation;
 
-  // Format countdown like the screenshot: "7h 27m 12s"
   const hours = Math.floor(secondsRemaining / 3600);
   const mins = Math.floor((secondsRemaining % 3600) / 60);
   const secs = secondsRemaining % 60;
@@ -56,7 +49,7 @@ export function NextPrayerCard({ timings, onScheduleUpdate }: NextPrayerCardProp
             <span
               dir="rtl"
               lang="ar"
-              className="font-amiri text-lg font-bold text-qalb-muted"
+              className="font-indopak text-lg font-bold text-qalb-muted"
             >
               {nextPrayer.nameAr}
             </span>

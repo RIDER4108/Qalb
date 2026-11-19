@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { CircleDot, Sun, Compass, CalendarCheck, BookOpen, ShieldCheck, ChevronRight } from "lucide-react";
+import { useApp } from "@/context/AppContext";
 
 export function QuickAccessList() {
+  const { qiblaInfo, todayCompletedCount } = useApp();
+
   const items = [
     {
       title: "Tasbih",
@@ -21,14 +24,14 @@ export function QuickAccessList() {
     },
     {
       title: "Qibla",
-      subtitle: "58° NE",
+      subtitle: `${qiblaInfo.bearing}° ${qiblaInfo.cardinal}`,
       href: "/qibla",
       icon: Compass,
       iconBg: "bg-[#EBF2FE] text-[#2563EB]",
     },
     {
       title: "Tracker",
-      subtitle: "2/5 today",
+      subtitle: `${todayCompletedCount}/5 today`,
       href: "/tracker",
       icon: CalendarCheck,
       iconBg: "bg-[#F3EBF9] text-[#7C3AED]",

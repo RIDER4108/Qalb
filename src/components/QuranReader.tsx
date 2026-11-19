@@ -21,10 +21,10 @@ export function QuranReader({
   const [copiedVerse, setCopiedVerse] = useState<string | null>(null);
 
   const arabicSizes = [
-    "text-xl sm:text-2xl leading-[2.2]",
-    "text-2xl sm:text-3xl leading-[2.3]",
-    "text-3xl sm:text-4xl leading-[2.4]",
-    "text-4xl sm:text-5xl leading-[2.5]",
+    "text-xl sm:text-2xl leading-[2.3]",
+    "text-2xl sm:text-3xl leading-[2.4]",
+    "text-3xl sm:text-4xl leading-[2.5]",
+    "text-4xl sm:text-5xl leading-[2.6]",
   ];
 
   const handleCopyVerse = (verseKey: string, arabicText: string, translationText?: string) => {
@@ -56,7 +56,7 @@ export function QuranReader({
         <div
           dir="rtl"
           lang="ar"
-          className="font-amiri text-3xl sm:text-4xl font-bold text-qalb-green dark:text-qalb-gold py-1"
+          className="font-indopak text-3xl sm:text-4xl font-bold text-qalb-green dark:text-qalb-gold py-1"
         >
           سُورَةُ {chapter.name_arabic}
         </div>
@@ -100,13 +100,13 @@ export function QuranReader({
         </div>
       </section>
 
-      {/* Traditional Bismillah */}
+      {/* Traditional Bismillah in IndoPak Script */}
       {!isBismillahOmitted && (
         <div className="text-center py-2 my-1">
           <div
             dir="rtl"
             lang="ar"
-            className="font-amiri text-2xl sm:text-3xl font-semibold text-qalb-green dark:text-qalb-gold tracking-wide"
+            className="font-indopak text-2xl sm:text-3xl font-semibold text-qalb-green dark:text-qalb-gold tracking-wide"
           >
             بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ
           </div>
@@ -131,7 +131,7 @@ export function QuranReader({
                   <span className="flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold bg-qalb-card-subtle dark:bg-qalb-night-subtle text-qalb-green dark:text-qalb-gold font-sans border border-qalb-border dark:border-qalb-night-border">
                     {verse.verse_number}
                   </span>
-                  <span className="text-[11px] font-medium text-qalb-muted">
+                  <span className="text-[11px] font-medium text-qalb-muted font-sans">
                     {verse.verse_key}
                   </span>
                 </div>
@@ -145,12 +145,12 @@ export function QuranReader({
                 </button>
               </div>
 
-              {/* Arabic Scripture: Strict dir="rtl", Amiri Font, line-height >= 2.2 */}
+              {/* Arabic Scripture: Strict dir="rtl", IndoPak Font, line-height >= 2.2 */}
               <div className="pt-4 pb-3">
                 <p
                   dir="rtl"
                   lang="ar"
-                  className={`font-amiri font-normal text-qalb-ink dark:text-qalb-night-ink text-right select-text ${arabicSizes[fontSizeLevel]}`}
+                  className={`font-indopak font-normal text-qalb-ink dark:text-qalb-night-ink text-right select-text ${arabicSizes[fontSizeLevel]}`}
                   style={{ wordSpacing: "0.15em" }}
                 >
                   {verse.text_uthmani}
@@ -166,7 +166,7 @@ export function QuranReader({
                   <p className="text-xs sm:text-sm leading-relaxed text-qalb-ink/90 dark:text-qalb-night-ink/90 font-sans">
                     {translation}
                   </p>
-                  <span className="inline-block mt-1 text-[10px] text-qalb-muted">
+                  <span className="inline-block mt-1 text-[10px] text-qalb-muted font-sans">
                     Translation: Saheeh International / Clear Quran
                   </span>
                 </div>

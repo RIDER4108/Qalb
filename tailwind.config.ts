@@ -33,7 +33,8 @@ const config: Config = {
         },
       },
       fontFamily: {
-        amiri: ["var(--font-amiri)", "Amiri", "Scheherazade New", "serif"],
+        amiri: ["'Noto Nastaliq Urdu'", "'Amiri'", "Scheherazade New", "serif"],
+        indopak: ["'Noto Nastaliq Urdu'", "'Amiri'", "Scheherazade New", "serif"],
         serif: ["var(--font-serif)", "Playfair Display", "Georgia", "serif"],
         sans: ["var(--font-sans)", "Plus Jakarta Sans", "system-ui", "sans-serif"],
       },

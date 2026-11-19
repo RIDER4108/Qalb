@@ -3,16 +3,16 @@ import { AladhanApiResponse, LocationConfig, PrayerItem, PrayerTimings } from "@
 const ALADHAN_BASE_URL = "https://api.aladhan.com/v1";
 
 export const DEFAULT_LOCATIONS: LocationConfig[] = [
-  { city: "Makkah", country: "Saudi Arabia", displayName: "Makkah, KSA", method: 4 },
-  { city: "Madinah", country: "Saudi Arabia", displayName: "Madinah, KSA", method: 4 },
-  { city: "London", country: "United Kingdom", displayName: "London, UK", method: 2 },
-  { city: "New York", country: "United States", displayName: "New York, USA", method: 2 },
-  { city: "Dubai", country: "United Arab Emirates", displayName: "Dubai, UAE", method: 4 },
-  { city: "Cairo", country: "Egypt", displayName: "Cairo, Egypt", method: 5 },
-  { city: "Istanbul", country: "Turkey", displayName: "Istanbul, Turkey", method: 13 },
-  { city: "Jakarta", country: "Indonesia", displayName: "Jakarta, Indonesia", method: 11 },
-  { city: "Kuala Lumpur", country: "Malaysia", displayName: "Kuala Lumpur, Malaysia", method: 11 },
-  { city: "Toronto", country: "Canada", displayName: "Toronto, Canada", method: 2 },
+  { city: "Makkah", country: "Saudi Arabia", displayName: "Makkah, KSA", method: 4, latitude: 21.4225, longitude: 39.8262 },
+  { city: "Madinah", country: "Saudi Arabia", displayName: "Madinah, KSA", method: 4, latitude: 24.4672, longitude: 39.6111 },
+  { city: "London", country: "United Kingdom", displayName: "London, UK", method: 2, latitude: 51.5074, longitude: -0.1278 },
+  { city: "New York", country: "United States", displayName: "New York, USA", method: 2, latitude: 40.7128, longitude: -74.0060 },
+  { city: "Dubai", country: "United Arab Emirates", displayName: "Dubai, UAE", method: 4, latitude: 25.2048, longitude: 55.2708 },
+  { city: "Cairo", country: "Egypt", displayName: "Cairo, Egypt", method: 5, latitude: 30.0444, longitude: 31.2357 },
+  { city: "Istanbul", country: "Turkey", displayName: "Istanbul, Turkey", method: 13, latitude: 41.0082, longitude: 28.9784 },
+  { city: "Jakarta", country: "Indonesia", displayName: "Jakarta, Indonesia", method: 11, latitude: -6.2088, longitude: 106.8456 },
+  { city: "Kuala Lumpur", country: "Malaysia", displayName: "Kuala Lumpur, Malaysia", method: 11, latitude: 3.1390, longitude: 101.6869 },
+  { city: "Toronto", country: "Canada", displayName: "Toronto, Canada", method: 2, latitude: 43.6532, longitude: -79.3832 },
 ];
 
 export async function getPrayerTimesByCity(
@@ -53,7 +53,6 @@ export async function getPrayerTimesByCoords(
 }
 
 export function parseTimeToMinutes(timeStr: string): number {
-  // Strip timezone if present (e.g. "05:14 (EEST)" -> "05:14")
   const clean = timeStr.split(" ")[0];
   const [hours, minutes] = clean.split(":").map(Number);
   return hours * 60 + minutes;
@@ -116,15 +115,14 @@ export function computePrayerSchedule(timings: PrayerTimings): {
     };
   });
 
-  // Determine next prayer (excluding Sunrise if only counting obligatory, but Sunrise is displayed in ribbon)
-  // The 5 obligatory prayers: Fajr, Dhuhr, Asr, Maghrib, Isha
+  // Obligatory prayers: Fajr, Dhuhr, Asr, Maghrib, Isha
   const obligatoryPrayers = prayers.filter((p) => p.id !== "Sunrise");
   
   let nextPrayer = obligatoryPrayers.find((p) => p.status === "upcoming");
   let currentPrayer: PrayerItem | null = null;
 
   if (!nextPrayer) {
-    // If all prayers today have passed, next prayer is tomorrow's Fajr
+    // Tomorrow's Fajr
     nextPrayer = obligatoryPrayers[0];
     currentPrayer = obligatoryPrayers[obligatoryPrayers.length - 1];
   } else {
@@ -132,15 +130,16 @@ export function computePrayerSchedule(timings: PrayerTimings): {
     currentPrayer = nextIdx > 0 ? obligatoryPrayers[nextIdx - 1] : null;
   }
 
-  // Set the immediately active prayer
-  if (currentPrayer) {
-    currentPrayer.status = "active";
-  }
+  // Set active on prayers array so that ONLY the exact next prayer has status: 'active'
+  prayers.forEach((p) => {
+    if (p.id === nextPrayer.id) {
+      p.status = "active";
+    }
+  });
 
   // Calculate seconds remaining to next prayer
   let nextPrayerSeconds = nextPrayer.timestamp;
   if (nextPrayerSeconds <= currentSecondsInDay) {
-    // Tomorrow's Fajr
     nextPrayerSeconds += 24 * 3600;
   }
   const secondsRemaining = Math.max(0, nextPrayerSeconds - currentSecondsInDay);
@@ -149,11 +148,9 @@ export function computePrayerSchedule(timings: PrayerTimings): {
   const hours = Math.floor(secondsRemaining / 3600);
   const mins = Math.floor((secondsRemaining % 3600) / 60);
   const secs = secondsRemaining % 60;
-  const formattedCountdown = `-${hours.toString().padStart(2, "0")}:${mins
-    .toString()
-    .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  const formattedCountdown = `${hours}h ${mins}m ${secs}s`;
 
-  // Calculate interval progress
+  // Interval progress
   let prevSeconds = currentPrayer ? currentPrayer.timestamp : (nextPrayerSeconds - 24 * 3600);
   if (prevSeconds > nextPrayerSeconds) {
     prevSeconds -= 24 * 3600;

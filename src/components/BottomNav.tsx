@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, CircleDot, BookOpen, Compass, CalendarCheck } from "lucide-react";
+import { Home, CircleDot, BookOpen, Book, CalendarCheck } from "lucide-react";
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -11,7 +11,7 @@ export function BottomNav() {
     { name: "Home", href: "/", icon: Home, isActive: pathname === "/" },
     { name: "Tasbih", href: "/tasbih", icon: CircleDot, isActive: pathname === "/tasbih" },
     { name: "Adhkar", href: "/adhkar", icon: BookOpen, isActive: pathname === "/adhkar" },
-    { name: "Qibla", href: "/qibla", icon: Compass, isActive: pathname === "/qibla" },
+    { name: "Quran", href: "/quran", icon: Book, isActive: pathname.startsWith("/quran") },
     { name: "Tracker", href: "/tracker", icon: CalendarCheck, isActive: pathname === "/tracker" },
   ];
 

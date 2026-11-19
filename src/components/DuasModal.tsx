@@ -58,8 +58,8 @@ export function DuasModal({ isOpen, onClose }: DuasModalProps) {
               <h2 className="text-base font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
                 Essential Duas
               </h2>
-              <p className="text-[11px] text-qalb-muted dark:text-qalb-night-muted">
-                From the Quran & Sahih Sunnah
+              <p className="text-[11px] text-qalb-muted font-sans">
+                From the Quran &amp; Sahih Sunnah
               </p>
             </div>
           </div>
@@ -81,7 +81,7 @@ export function DuasModal({ isOpen, onClose }: DuasModalProps) {
               placeholder="Search Duas by keyword or meaning..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border bg-qalb-card dark:bg-qalb-night-card border-qalb-border dark:border-qalb-night-border text-qalb-ink dark:text-qalb-night-ink placeholder:text-qalb-muted focus:border-qalb-gold outline-none"
+              className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border bg-qalb-card dark:bg-qalb-night-card border-qalb-border dark:border-qalb-night-border text-qalb-ink dark:text-qalb-night-ink placeholder:text-qalb-muted focus:border-qalb-gold outline-none font-sans"
             />
           </div>
 
@@ -125,12 +125,12 @@ export function DuasModal({ isOpen, onClose }: DuasModalProps) {
                   </button>
                 </div>
 
-                {/* Arabic */}
+                {/* Arabic in IndoPak Font */}
                 <div className="py-1">
                   <p
                     dir="rtl"
                     lang="ar"
-                    className="font-amiri text-xl sm:text-2xl text-qalb-ink dark:text-qalb-night-ink leading-[2.2] text-right"
+                    className="font-indopak text-xl sm:text-2xl text-qalb-ink dark:text-qalb-night-ink leading-[2.3] text-right"
                   >
                     {item.arabic}
                   </p>
@@ -146,7 +146,7 @@ export function DuasModal({ isOpen, onClose }: DuasModalProps) {
                   "{item.translation}"
                 </p>
 
-                <div className="pt-1 border-t border-qalb-border/50 dark:border-qalb-night-border/50 text-[10px] text-qalb-muted">
+                <div className="pt-1 border-t border-qalb-border/50 dark:border-qalb-night-border/50 text-[10px] text-qalb-muted font-sans">
                   Source: {item.reference}
                 </div>
               </article>
@@ -154,7 +154,7 @@ export function DuasModal({ isOpen, onClose }: DuasModalProps) {
           })}
 
           {filtered.length === 0 && (
-            <div className="text-center py-8 text-xs text-qalb-muted">
+            <div className="text-center py-8 text-xs text-qalb-muted font-sans">
               No Duas found matching your search.
             </div>
           )}

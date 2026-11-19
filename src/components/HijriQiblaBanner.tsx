@@ -1,16 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { HijriDate } from "@/types/prayer";
 import { Navigation } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useApp } from "@/context/AppContext";
 
-interface HijriQiblaBannerProps {
-  hijriDate: HijriDate;
-  qiblaBearing?: number;
-}
-
-export function HijriQiblaBanner({ hijriDate, qiblaBearing = 58 }: HijriQiblaBannerProps) {
+export function HijriQiblaBanner() {
+  const { hijriDate, qiblaInfo } = useApp();
   const [timeStr, setTimeStr] = useState<string>("");
 
   useEffect(() => {
@@ -33,9 +29,14 @@ export function HijriQiblaBanner({ hijriDate, qiblaBearing = 58 }: HijriQiblaBan
     return () => clearInterval(interval);
   }, []);
 
+  if (!hijriDate) {
+    return (
+      <div className="w-full h-28 rounded-3xl animate-pulse bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border" />
+    );
+  }
+
   return (
     <section className="relative overflow-hidden rounded-3xl p-5 sm:p-6 text-white shadow-qalb-float bg-qalb-green dark:bg-qalb-green-dark border border-qalb-green-dark">
-      {/* Subtle background glow */}
       <div className="absolute -top-10 -right-10 w-44 h-44 rounded-full bg-white/5 pointer-events-none" />
 
       <div className="relative z-10 flex items-center justify-between gap-3">
@@ -62,7 +63,7 @@ export function HijriQiblaBanner({ hijriDate, qiblaBearing = 58 }: HijriQiblaBan
             QIBLA
           </span>
           <span className="text-sm font-bold text-white font-sans mt-0.5">
-            {qiblaBearing}° NE
+            {qiblaInfo.bearing}° {qiblaInfo.cardinal}
           </span>
           <div className="mt-1 flex items-center justify-center w-5 h-5 rounded-full bg-white/20 text-white">
             <Navigation className="w-3 h-3 group-hover:rotate-45 transition-transform" />

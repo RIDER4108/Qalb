@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -36,6 +38,12 @@
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
   }
+
+  /* IndoPak Nastaliq style Arabic rules */
+  .font-indopak, .font-amiri, [dir="rtl"][lang="ar"] {
+    font-family: 'Noto Nastaliq Urdu', 'Amiri', 'Scheherazade New', serif;
+    line-height: 2.2 !important;
+  }
 }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -54,4 +62,8 @@
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: rgba(17, 56, 43, 0.3);
+}
+
+.safe-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }

@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { RotateCcw, Hand, Check, Sparkles } from "lucide-react";
+import { RotateCcw, Hand, Check } from "lucide-react";
 import { ADHKAR_COLLECTION, AdhkarItem } from "@/data/adhkar";
+import { useApp } from "@/context/AppContext";
 
 export default function AdhkarPage() {
+  const { adhkarCounts, incrementAdhkar, resetAdhkar } = useApp();
   const [activeCategory, setActiveCategory] = useState<AdhkarItem["category"]>("morning");
-  const [counts, setCounts] = useState<Record<string, number>>({});
 
   const categories: { id: AdhkarItem["category"]; label: string; total: number }[] = [
     { id: "morning", label: "Morning", total: 6 },
@@ -18,12 +19,12 @@ export default function AdhkarPage() {
   const currentItems = ADHKAR_COLLECTION.filter((item) => item.category === activeCategory);
 
   const completedCount = currentItems.filter(
-    (item) => (counts[item.id] || 0) >= item.targetCount
+    (item) => (adhkarCounts[item.id] || 0) >= item.targetCount
   ).length;
 
   const totalTargetRepetitions = currentItems.reduce((acc, item) => acc + item.targetCount, 0);
   const currentTotalReps = currentItems.reduce(
-    (acc, item) => acc + Math.min(item.targetCount, counts[item.id] || 0),
+    (acc, item) => acc + Math.min(item.targetCount, adhkarCounts[item.id] || 0),
     0
   );
 
@@ -32,18 +33,10 @@ export default function AdhkarPage() {
     : 0;
 
   const handleTap = (id: string, target: number) => {
-    setCounts((prev) => {
-      const current = prev[id] || 0;
-      if (current >= target) return prev;
-      if (typeof navigator !== "undefined" && navigator.vibrate) {
-        navigator.vibrate(20);
-      }
-      return { ...prev, [id]: current + 1 };
-    });
-  };
-
-  const handleReset = () => {
-    setCounts({});
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
+      navigator.vibrate(20);
+    }
+    incrementAdhkar(id, target);
   };
 
   return (
@@ -60,7 +53,7 @@ export default function AdhkarPage() {
         </div>
 
         <button
-          onClick={handleReset}
+          onClick={resetAdhkar}
           className="flex items-center justify-center w-9 h-9 rounded-full bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border text-qalb-muted hover:text-qalb-ink shadow-sm"
           title="Reset Counts"
         >
@@ -83,7 +76,7 @@ export default function AdhkarPage() {
               }`}
             >
               <span>{c.label}</span>
-              {isSelected && <span className="ml-1.5 opacity-80 text-[10px]">{c.total} duas</span>}
+              {isSelected && <span className="ml-1.5 opacity-80 text-[10px] font-sans">{c.total} duas</span>}
             </button>
           );
         })}
@@ -107,16 +100,16 @@ export default function AdhkarPage() {
           />
         </div>
 
-        <div className="flex items-center justify-between text-[11px] text-qalb-muted pt-0.5">
+        <div className="flex items-center justify-between text-[11px] text-qalb-muted pt-0.5 font-sans">
           <span>{currentItems.length - completedCount} duas remaining</span>
           <span>Tap card to count</span>
         </div>
       </section>
 
-      {/* Adhkar Cards List */}
+      {/* Adhkar Cards List with IndoPak Font */}
       <div className="space-y-3.5">
         {currentItems.map((item, idx) => {
-          const count = counts[item.id] || 0;
+          const count = adhkarCounts[item.id] || 0;
           const isDone = count >= item.targetCount;
           const remaining = item.targetCount - count;
 
@@ -137,11 +130,11 @@ export default function AdhkarPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-medium text-qalb-muted">
+                  <span className="text-[10px] font-medium text-qalb-muted font-sans">
                     {item.source}
                   </span>
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold tabular-nums ${
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold tabular-nums font-sans ${
                       isDone
                         ? "bg-emerald-600 text-white"
                         : "bg-qalb-green text-white dark:bg-qalb-gold dark:text-qalb-night-bg"
@@ -152,12 +145,12 @@ export default function AdhkarPage() {
                 </div>
               </div>
 
-              {/* Arabic Scripture: Strict dir="rtl", Amiri Font */}
+              {/* Arabic Scripture in IndoPak Nastaliq font with generous line-height */}
               <div className="py-4">
                 <p
                   dir="rtl"
                   lang="ar"
-                  className="font-amiri text-2xl sm:text-3xl text-qalb-ink dark:text-qalb-night-ink leading-[2.2] text-right"
+                  className="font-indopak text-2xl sm:text-3xl text-qalb-ink dark:text-qalb-night-ink leading-[2.3] text-right"
                 >
                   {item.arabic}
                 </p>

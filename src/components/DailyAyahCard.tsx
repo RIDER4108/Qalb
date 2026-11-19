@@ -53,7 +53,7 @@ export function DailyAyahCard() {
             <h3 className="text-xs font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
               Daily Ayah
             </h3>
-            <p className="text-[10px] text-qalb-muted">
+            <p className="text-[10px] text-qalb-muted font-sans">
               Surah Al-Baqarah 2:286
             </p>
           </div>
@@ -69,12 +69,12 @@ export function DailyAyahCard() {
         </button>
       </div>
 
-      {/* Scripture: Strict dir="rtl", Amiri Font, generous line-height */}
+      {/* Scripture: Strict dir="rtl", IndoPak Font, generous line-height */}
       <div className="py-2 text-center">
         <p
           dir="rtl"
           lang="ar"
-          className="font-amiri text-2xl sm:text-3xl font-bold text-qalb-ink dark:text-qalb-night-ink leading-[2.2]"
+          className="font-indopak text-2xl sm:text-3xl font-bold text-qalb-ink dark:text-qalb-night-ink leading-[2.2]"
         >
           لَا يُكَلِّفُ اللَّهُ نَفْسًا إِلَّا وُسْعَهَا
         </p>

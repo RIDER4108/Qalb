@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Smartphone, Plus, RotateCcw, Volume2, VolumeX, Hand, Check } from "lucide-react";
+import { useState } from "react";
+import { Smartphone, Plus, RotateCcw, Volume2, VolumeX, Check } from "lucide-react";
+import { useApp } from "@/context/AppContext";
 
 interface DhikrPreset {
   id: string;
@@ -21,35 +22,24 @@ const PRESETS: DhikrPreset[] = [
 ];
 
 export default function TasbihPage() {
+  const {
+    tasbihCount,
+    tasbihCycles,
+    tasbihTodayTotal,
+    incrementTasbih,
+    resetTasbih,
+  } = useApp();
+
   const [selectedPreset, setSelectedPreset] = useState<DhikrPreset>(PRESETS[0]);
-  const [count, setCount] = useState<number>(16);
-  const [totalToday, setTotalToday] = useState<number>(1247);
-  const [cycles, setCycles] = useState<number>(7);
   const [hapticEnabled, setHapticEnabled] = useState<boolean>(true);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(false);
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
+  const [isPressing, setIsPressing] = useState<boolean>(false);
+
+  // Custom preset form
   const [newArabic, setNewArabic] = useState("");
   const [newName, setNewName] = useState("");
   const [newTarget, setNewTarget] = useState("33");
-
-  useEffect(() => {
-    const saved = localStorage.getItem("qalb-tasbih-count");
-    if (saved) {
-      try {
-        const data = JSON.parse(saved);
-        setCount(data.count ?? 16);
-        setTotalToday(data.totalToday ?? 1247);
-        setCycles(data.cycles ?? 7);
-      } catch (e) {}
-    }
-  }, []);
-
-  const saveStats = (c: number, total: number, cyc: number) => {
-    localStorage.setItem(
-      "qalb-tasbih-count",
-      JSON.stringify({ count: c, totalToday: total, cycles: cyc })
-    );
-  };
 
   const playClickSound = () => {
     if (!soundEnabled) return;
@@ -58,58 +48,41 @@ export default function TasbihPage() {
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.type = "sine";
-      osc.frequency.setValueAtTime(600, audioCtx.currentTime);
-      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+      osc.frequency.setValueAtTime(650, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
       osc.connect(gain);
       gain.connect(audioCtx.destination);
       osc.start();
-      osc.stop(audioCtx.currentTime + 0.05);
+      osc.stop(audioCtx.currentTime + 0.04);
     } catch (e) {}
   };
 
-  const handleTap = () => {
+  const handleCircleTap = () => {
+    setIsPressing(true);
+    setTimeout(() => setIsPressing(false), 120);
+
     playClickSound();
     if (hapticEnabled && typeof navigator !== "undefined" && navigator.vibrate) {
       navigator.vibrate(25);
     }
 
-    const nextCount = count + 1;
-    const nextTotal = totalToday + 1;
-
-    if (nextCount >= selectedPreset.target) {
-      if (hapticEnabled && typeof navigator !== "undefined" && navigator.vibrate) {
-        navigator.vibrate([50, 50, 50]);
-      }
-      setCount(0);
-      setCycles(cycles + 1);
-      setTotalToday(nextTotal);
-      saveStats(0, nextTotal, cycles + 1);
-    } else {
-      setCount(nextCount);
-      setTotalToday(nextTotal);
-      saveStats(nextCount, nextTotal, cycles);
-    }
-  };
-
-  const handleReset = () => {
-    setCount(0);
-    saveStats(0, totalToday, cycles);
+    incrementTasbih(selectedPreset.target);
   };
 
   const target = selectedPreset.target;
-  const remainingInCycle = target - count;
-  const percentInCycle = Math.round((count / target) * 100);
+  const remainingInCycle = target - tasbihCount;
+  const percentInCycle = Math.min(100, Math.round((tasbihCount / target) * 100));
 
-  // Weekly dummy distribution matching screenshot (M, T, W, T, F, S, S)
+  // Weekly dummy data
   const weekData = [
-    { day: "M", height: "55%", active: false },
-    { day: "T", height: "80%", active: false },
+    { day: "M", height: "45%", active: false },
+    { day: "T", height: "60%", active: false },
     { day: "W", height: "40%", active: false },
-    { day: "T", height: "95%", active: false },
-    { day: "F", height: "70%", active: false },
-    { day: "S", height: "60%", active: false },
-    { day: "S", height: "85%", active: true }, // Current Sunday highlighted in gold
+    { day: "T", height: "90%", active: true },
+    { day: "F", height: "30%", active: false },
+    { day: "S", height: "20%", active: false },
+    { day: "S", height: "15%", active: false },
   ];
 
   return (
@@ -149,7 +122,7 @@ export default function TasbihPage() {
       </header>
 
       {/* Preset Pills Carousel */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1.5 custom-scrollbar">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
         {PRESETS.map((preset) => {
           const isSelected = selectedPreset.id === preset.id;
           return (
@@ -157,7 +130,7 @@ export default function TasbihPage() {
               key={preset.id}
               onClick={() => {
                 setSelectedPreset(preset);
-                setCount(0);
+                resetTasbih();
               }}
               className={`flex flex-col items-center justify-center px-4 py-2 rounded-2xl border transition-all shrink-0 min-w-[120px] text-center ${
                 isSelected
@@ -168,14 +141,14 @@ export default function TasbihPage() {
               <span
                 dir="rtl"
                 lang="ar"
-                className={`font-amiri text-xs font-semibold leading-none ${
+                className={`font-indopak text-xs font-semibold leading-[2.0] ${
                   isSelected ? "text-white" : "text-qalb-ink dark:text-qalb-night-ink"
                 }`}
               >
                 {preset.arabic}
               </span>
               <span
-                className={`text-[10px] mt-1 font-sans ${
+                className={`text-[10px] mt-0.5 font-sans ${
                   isSelected ? "text-white/80" : "text-qalb-muted"
                 }`}
               >
@@ -195,12 +168,12 @@ export default function TasbihPage() {
           </span>
         </div>
 
-        {/* Arabic Dhikr Text */}
+        {/* Arabic Dhikr Text in IndoPak font */}
         <div className="space-y-1">
           <div
             dir="rtl"
             lang="ar"
-            className="font-amiri text-3xl sm:text-4xl font-bold text-qalb-green dark:text-qalb-gold"
+            className="font-indopak text-3xl sm:text-4xl font-bold text-qalb-green dark:text-qalb-gold py-1"
           >
             {selectedPreset.arabic}
           </div>
@@ -209,104 +182,118 @@ export default function TasbihPage() {
           </p>
         </div>
 
-        {/* Circular Progress Display */}
-        <div className="relative flex items-center justify-center my-3">
-          <svg className="w-52 h-52 sm:w-60 sm:h-60" viewBox="0 0 200 200">
-            {/* Background ring */}
-            <circle
-              cx="100"
-              cy="100"
-              r="80"
-              fill="none"
-              stroke="#F1EEE7"
-              strokeWidth="6"
-            />
-            {/* Progress ring */}
-            <circle
-              cx="100"
-              cy="100"
-              r="80"
-              fill="none"
-              stroke="#1D7A5C"
-              strokeWidth="6"
-              strokeDasharray={2 * Math.PI * 80}
-              strokeDashoffset={2 * Math.PI * 80 * (1 - count / target)}
-              strokeLinecap="round"
-              transform="rotate(-90 100 100)"
-              className="transition-all duration-200"
-            />
-          </svg>
-
-          {/* Center Content */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-4xl sm:text-5xl font-serif font-bold text-qalb-ink dark:text-qalb-night-ink tracking-tight tabular-nums">
-              {totalToday}
-            </span>
-            <span className="text-xs font-semibold text-qalb-muted font-sans mt-0.5">
-              {count} / {target}
-            </span>
-            <span className="mt-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#E3F2ED] text-[#1D7A5C]">
-              {cycles} cycles • {percentInCycle}%
-            </span>
-          </div>
-        </div>
-
-        {/* Big TAP TO COUNT Button */}
-        <div>
+        {/* Decluttered Interactive Tappable Circle Button */}
+        <div className="flex flex-col items-center justify-center my-2">
           <button
-            onClick={handleTap}
-            className="w-full max-w-xs mx-auto py-3.5 px-6 rounded-full font-bold text-sm tracking-wider uppercase text-white bg-qalb-green hover:bg-qalb-green-dark active:scale-95 transition-all shadow-md flex items-center justify-center gap-2"
+            onClick={handleCircleTap}
+            aria-label="Tap to count Dhikr"
+            className={`relative flex items-center justify-center w-56 h-56 sm:w-64 sm:h-64 rounded-full transition-transform duration-150 select-none outline-none focus:ring-4 focus:ring-qalb-gold/20 ${
+              isPressing ? "scale-95 shadow-inner" : "hover:scale-[1.02] shadow-md active:scale-95"
+            }`}
           >
-            <Hand className="w-4 h-4" />
-            <span>TAP TO COUNT</span>
+            {/* SVG Progress Ring */}
+            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 200 200">
+              <circle
+                cx="100"
+                cy="100"
+                r="82"
+                fill="none"
+                stroke="#F1EEE7"
+                strokeWidth="7"
+                className="dark:stroke-qalb-night-subtle"
+              />
+              <circle
+                cx="100"
+                cy="100"
+                r="82"
+                fill="none"
+                stroke="#1D7A5C"
+                strokeWidth="7"
+                strokeDasharray={2 * Math.PI * 82}
+                strokeDashoffset={2 * Math.PI * 82 * (1 - tasbihCount / target)}
+                strokeLinecap="round"
+                transform="rotate(-90 100 100)"
+                className="transition-all duration-150 ease-out"
+              />
+            </svg>
+
+            {/* Decluttered Inside: Only current cycle count */}
+            <div className="relative z-10 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-5xl sm:text-6xl font-serif font-bold text-qalb-ink dark:text-qalb-night-ink tracking-tight tabular-nums">
+                {tasbihCount}
+              </span>
+              <span className="text-xs font-semibold text-qalb-muted font-sans mt-0.5">
+                / {target}
+              </span>
+              <span className="mt-2 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#E3F2ED] text-[#1D7A5C]">
+                {tasbihCycles} cycles • {percentInCycle}%
+              </span>
+              <span className="text-[10px] text-qalb-muted mt-2 uppercase tracking-wider font-semibold">
+                Tap Circle
+              </span>
+            </div>
           </button>
-          <p className="text-[11px] text-qalb-muted mt-2">
-            {remainingInCycle} left to complete cycle • <strong className="text-qalb-green dark:text-qalb-gold">{cycles}x completed</strong>
-          </p>
         </div>
 
-        {/* Auxiliary Controls: Reset, Haptic Toggle, Sound Toggle */}
-        <div className="flex items-center justify-center gap-2 pt-2">
+        {/* Subtitle helper */}
+        <p className="text-[11px] text-qalb-muted">
+          {remainingInCycle} left to complete cycle •{" "}
+          <strong className="text-qalb-green dark:text-qalb-gold">{tasbihCycles}x completed</strong>
+        </p>
+
+        {/* Unified Pill Control Buttons: Reset, Haptic, Sound */}
+        <div className="flex items-center justify-center gap-2 pt-1">
+          {/* Reset Pill */}
           <button
-            onClick={handleReset}
-            className="flex items-center gap-1.5 py-2 px-3.5 rounded-xl text-xs font-semibold bg-qalb-card-subtle dark:bg-qalb-night-subtle text-qalb-ink dark:text-qalb-night-ink hover:border-qalb-gold border border-qalb-border dark:border-qalb-night-border"
+            onClick={resetTasbih}
+            className="flex items-center gap-1.5 py-2 px-4 rounded-xl text-xs font-semibold bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border text-qalb-ink dark:text-qalb-night-ink hover:border-qalb-gold transition-all active:scale-95 shadow-xs"
           >
             <RotateCcw className="w-3.5 h-3.5 text-qalb-muted" />
             <span>Reset</span>
           </button>
 
+          {/* Haptic Pill with clean unified design & active state */}
           <button
             onClick={() => setHapticEnabled(!hapticEnabled)}
-            className={`flex items-center gap-1.5 py-2 px-3.5 rounded-xl text-xs font-semibold border transition-colors ${
+            className={`flex items-center gap-1.5 py-2 px-4 rounded-xl text-xs font-semibold border transition-all active:scale-95 shadow-xs ${
               hapticEnabled
                 ? "bg-qalb-green text-white border-qalb-green"
-                : "bg-qalb-card-subtle dark:bg-qalb-night-subtle text-qalb-ink dark:text-qalb-night-ink border-qalb-border"
+                : "bg-qalb-card dark:bg-qalb-night-card border-qalb-border dark:border-qalb-night-border text-qalb-muted"
             }`}
           >
-            <span>+ Tap • Haptic</span>
+            <Smartphone className="w-3.5 h-3.5" />
+            <span>{hapticEnabled ? "Haptic On" : "Haptic Off"}</span>
           </button>
 
+          {/* Sound Pill */}
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
-            className="flex items-center gap-1.5 py-2 px-3.5 rounded-xl text-xs font-semibold bg-qalb-card-subtle dark:bg-qalb-night-subtle text-qalb-ink dark:text-qalb-night-ink hover:border-qalb-gold border border-qalb-border dark:border-qalb-night-border"
+            className={`flex items-center gap-1.5 py-2 px-4 rounded-xl text-xs font-semibold border transition-all active:scale-95 shadow-xs ${
+              soundEnabled
+                ? "bg-qalb-green text-white border-qalb-green"
+                : "bg-qalb-card dark:bg-qalb-night-card border-qalb-border dark:border-qalb-night-border text-qalb-muted"
+            }`}
           >
-            {soundEnabled ? <Volume2 className="w-3.5 h-3.5 text-qalb-green" /> : <VolumeX className="w-3.5 h-3.5 text-qalb-muted" />}
-            <span>Sound</span>
+            {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+            <span>{soundEnabled ? "Sound On" : "Sound Off"}</span>
           </button>
         </div>
       </section>
 
-      {/* Statistics Cards (Screenshot 6) */}
+      {/* Moved Out: Daily & Weekly Total Stats Cards */}
       <section className="grid grid-cols-2 gap-2.5">
         <div className="p-4 rounded-2xl bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border shadow-qalb-card space-y-1.5">
           <span className="text-[10px] font-bold uppercase tracking-wider text-qalb-muted">
             TODAY'S TOTAL
           </span>
           <div className="text-xl font-serif font-bold text-qalb-ink dark:text-qalb-night-ink tabular-nums">
-            {totalToday.toLocaleString()}
+            {tasbihTodayTotal.toLocaleString()}
           </div>
           <div className="w-full h-1.5 rounded-full bg-qalb-card-subtle dark:bg-qalb-night-subtle overflow-hidden">
-            <div className="h-full bg-emerald-600 rounded-full w-3/4" />
+            <div
+              className="h-full bg-emerald-600 rounded-full transition-all duration-300"
+              style={{ width: `${Math.min(100, (tasbihTodayTotal / 500) * 100)}%` }}
+            />
           </div>
         </div>
 
@@ -318,7 +305,10 @@ export default function TasbihPage() {
             5,000
           </div>
           <div className="w-full h-1.5 rounded-full bg-qalb-card-subtle dark:bg-qalb-night-subtle overflow-hidden">
-            <div className="h-full bg-qalb-gold rounded-full w-3/5" />
+            <div
+              className="h-full bg-qalb-gold rounded-full transition-all duration-300"
+              style={{ width: `${Math.min(100, (tasbihTodayTotal / 5000) * 100)}%` }}
+            />
           </div>
         </div>
       </section>
@@ -330,11 +320,10 @@ export default function TasbihPage() {
             This Week
           </h3>
           <span className="text-[10px] text-qalb-muted">
-            Tap to view details
+            Daily consistency
           </span>
         </div>
 
-        {/* 7-day capsule bars */}
         <div className="flex items-end justify-between pt-4 pb-1 h-28 px-2">
           {weekData.map((item, idx) => (
             <div key={idx} className="flex flex-col items-center gap-2 h-full justify-end">
@@ -371,21 +360,21 @@ export default function TasbihPage() {
               dir="rtl"
               value={newArabic}
               onChange={(e) => setNewArabic(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl border bg-qalb-card-subtle border-qalb-border outline-none"
+              className="w-full px-3 py-2 text-xs rounded-xl border bg-qalb-card-subtle border-qalb-border outline-none font-indopak"
             />
             <input
               type="text"
               placeholder="Title / Transliteration (e.g. SubhanAllah)"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl border bg-qalb-card-subtle border-qalb-border outline-none"
+              className="w-full px-3 py-2 text-xs rounded-xl border bg-qalb-card-subtle border-qalb-border outline-none font-sans"
             />
             <input
               type="number"
               placeholder="Target Count (e.g. 33 or 100)"
               value={newTarget}
               onChange={(e) => setNewTarget(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl border bg-qalb-card-subtle border-qalb-border outline-none"
+              className="w-full px-3 py-2 text-xs rounded-xl border bg-qalb-card-subtle border-qalb-border outline-none font-sans"
             />
             <div className="flex gap-2 pt-2">
               <button

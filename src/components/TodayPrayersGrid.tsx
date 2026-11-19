@@ -1,25 +1,14 @@
 "use client";
 
-import { useState } from "react";
 import { Check, Sun } from "lucide-react";
-import { PrayerItem } from "@/types/prayer";
+import { useApp } from "@/context/AppContext";
 
 interface TodayPrayersGridProps {
-  prayers: PrayerItem[];
   onOpenTimetable?: () => void;
 }
 
-export function TodayPrayersGrid({ prayers, onOpenTimetable }: TodayPrayersGridProps) {
-  const [completedPrayers, setCompletedPrayers] = useState<Record<string, boolean>>({
-    Fajr: true, // Default matching screenshot
-  });
-
-  const togglePrayer = (id: string) => {
-    setCompletedPrayers((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
-  };
+export function TodayPrayersGrid({ onOpenTimetable }: TodayPrayersGridProps) {
+  const { prayers, nextPrayer, isPrayerCompletedToday, togglePrayerToday } = useApp();
 
   return (
     <section className="space-y-3">
@@ -39,14 +28,15 @@ export function TodayPrayersGrid({ prayers, onOpenTimetable }: TodayPrayersGridP
       {/* 2-Column Grid Adjusted so there is no space left */}
       <div className="grid grid-cols-2 gap-2.5">
         {prayers.map((prayer) => {
-          const isNext = prayer.status === "active";
-          const isDone = completedPrayers[prayer.id];
+          // Exactly matching the next prayer banner
+          const isNext = nextPrayer?.id === prayer.id;
+          const isDone = isPrayerCompletedToday(prayer.id);
           const isSunrise = prayer.id === "Sunrise";
 
           return (
             <div
               key={prayer.id}
-              onClick={() => !isSunrise && togglePrayer(prayer.id)}
+              onClick={() => !isSunrise && togglePrayerToday(prayer.id)}
               className={`relative flex flex-col justify-between rounded-2xl transition-all duration-200 cursor-pointer overflow-hidden border shadow-sm ${
                 isNext
                   ? "bg-qalb-green text-white border-qalb-green shadow-qalb-float"
@@ -65,12 +55,14 @@ export function TodayPrayersGrid({ prayers, onOpenTimetable }: TodayPrayersGridP
                     {prayer.nameEn}
                   </span>
 
-                  {isNext || isDone ? (
+                  {isDone ? (
                     <div className="flex items-center justify-center w-5 h-5 rounded-full bg-white text-qalb-green shadow-xs">
                       <Check className="w-3.5 h-3.5 stroke-[3]" />
                     </div>
                   ) : isSunrise ? (
                     <Sun className="w-4 h-4 text-qalb-muted" />
+                  ) : isNext ? (
+                    <div className="w-4 h-4 rounded-full border border-white/50" />
                   ) : (
                     <div className="w-4 h-4 rounded-full border border-qalb-border dark:border-qalb-night-border" />
                   )}
@@ -88,8 +80,8 @@ export function TodayPrayersGrid({ prayers, onOpenTimetable }: TodayPrayersGridP
                   <span
                     dir="rtl"
                     lang="ar"
-                    className={`font-amiri text-xs font-semibold ${
-                      isNext ? "text-white/80" : "text-qalb-muted"
+                    className={`font-indopak text-xs font-semibold ${
+                      isNext ? "text-white/90" : "text-qalb-muted"
                     }`}
                   >
                     {prayer.nameAr}

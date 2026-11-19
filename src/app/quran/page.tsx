@@ -163,7 +163,7 @@ export default function QuranCatalogPage() {
               <div
                 dir="rtl"
                 lang="ar"
-                className="font-amiri text-xl font-bold text-qalb-green dark:text-qalb-gold leading-none"
+                className="font-indopak text-xl font-bold text-qalb-green dark:text-qalb-gold leading-[2.0]"
               >
                 {ch.name_arabic}
               </div>

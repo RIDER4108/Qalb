@@ -1,73 +1,32 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Compass, Navigation, Locate, RotateCw } from "lucide-react";
+import { Navigation, Locate } from "lucide-react";
+import { useApp } from "@/context/AppContext";
 
 export default function QiblaPage() {
+  const { currentLocation, qiblaInfo, setLocation } = useApp();
   const [heading, setHeading] = useState<number>(42);
-  const [qiblaBearing, setQiblaBearing] = useState<number>(58); // 58 deg NE
-  const [distanceKm, setDistanceKm] = useState<number>(6842);
-  const [coordsStr, setCoordsStr] = useState<string>("21.38°N 39.85°E");
-  const [hasCompassSensor, setHasCompassSensor] = useState<boolean>(false);
   const [calibrating, setCalibrating] = useState<boolean>(false);
 
-  // Kaaba coordinates
-  const KAABA_LAT = 21.422487;
-  const KAABA_LNG = 39.826206;
+  const qiblaBearing = qiblaInfo.bearing;
+  const cardinal = qiblaInfo.cardinal;
+  const distanceKm = qiblaInfo.distanceKm;
 
-  // Calculate Qibla bearing and distance given lat/lng
-  const calculateQibla = (lat: number, lng: number) => {
-    const latRad = (lat * Math.PI) / 180;
-    const lngRad = (lng * Math.PI) / 180;
-    const kLatRad = (KAABA_LAT * Math.PI) / 180;
-    const kLngRad = (KAABA_LNG * Math.PI) / 180;
-
-    const y = Math.sin(kLngRad - lngRad);
-    const x =
-      Math.cos(latRad) * Math.tan(kLatRad) -
-      Math.sin(latRad) * Math.cos(kLngRad - lngRad);
-
-    let qibla = (Math.atan2(y, x) * 180) / Math.PI;
-    qibla = (qibla + 360) % 360;
-    setQiblaBearing(Math.round(qibla));
-
-    // Great circle distance (Haversine)
-    const R = 6371; // Earth radius in km
-    const dLat = kLatRad - latRad;
-    const dLng = kLngRad - lngRad;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(latRad) * Math.cos(kLatRad) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    setDistanceKm(Math.round(R * c));
-    setCoordsStr(`${lat.toFixed(2)}°N ${lng.toFixed(2)}°E`);
-  };
+  const lat = currentLocation.latitude ?? 21.4225;
+  const lng = currentLocation.longitude ?? 39.8262;
+  const coordsStr = `${lat >= 0 ? lat.toFixed(2) + "°N" : Math.abs(lat).toFixed(2) + "°S"} ${
+    lng >= 0 ? lng.toFixed(2) + "°E" : Math.abs(lng).toFixed(2) + "°W"
+  }`;
 
   useEffect(() => {
-    // Attempt to read Geolocation
-    if (typeof navigator !== "undefined" && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          calculateQibla(pos.coords.latitude, pos.coords.longitude);
-        },
-        () => {
-          // Default to London/Makkah
-          calculateQibla(21.38, 39.85);
-        }
-      );
-    }
-
-    // Attempt to read device compass orientation
+    // Compass orientation from device sensor
     const handleOrientation = (e: DeviceOrientationEvent) => {
       const anyEvent = e as any;
       if (anyEvent.webkitCompassHeading !== undefined) {
-        // iOS
         setHeading(Math.round(anyEvent.webkitCompassHeading));
-        setHasCompassSensor(true);
       } else if (e.alpha !== null) {
-        // Android
         setHeading(Math.round(360 - e.alpha));
-        setHasCompassSensor(true);
       }
     };
 
@@ -84,8 +43,30 @@ export default function QiblaPage() {
 
   // Compute rotation angle difference
   const diff = ((qiblaBearing - heading + 540) % 360) - 180;
-  const isAligned = Math.abs(diff) <= 3;
+  const isAligned = Math.abs(diff) <= 4;
   const turnDirection = diff > 0 ? `${Math.abs(Math.round(diff))}° right` : `${Math.abs(Math.round(diff))}° left`;
+
+  const handleLocate = () => {
+    setCalibrating(true);
+    if (typeof navigator !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setLocation({
+            city: "Current GPS",
+            country: "Local",
+            displayName: "Current Location",
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            method: 2,
+          });
+          setCalibrating(false);
+        },
+        () => setCalibrating(false)
+      );
+    } else {
+      setTimeout(() => setCalibrating(false), 1000);
+    }
+  };
 
   return (
     <main className="space-y-4">
@@ -101,12 +82,9 @@ export default function QiblaPage() {
         </div>
 
         <button
-          onClick={() => {
-            setCalibrating(true);
-            setTimeout(() => setCalibrating(false), 1500);
-          }}
+          onClick={handleLocate}
           className="flex items-center justify-center w-9 h-9 rounded-full bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border text-qalb-ink dark:text-qalb-night-ink shadow-sm hover:border-qalb-gold"
-          title="Calibrate GPS"
+          title="Update Location GPS"
         >
           <Locate className={`w-4 h-4 ${calibrating ? "animate-spin text-qalb-gold" : ""}`} />
         </button>
@@ -178,14 +156,14 @@ export default function QiblaPage() {
         >
           <Navigation className="w-4 h-4 fill-current" />
           <span>
-            {isAligned ? "FACING QIBLA (58° NE)" : `QIBLA ${qiblaBearing}° NE • ${turnDirection}`}
+            {isAligned ? `FACING KAABA (${qiblaBearing}° ${cardinal})` : `QIBLA ${qiblaBearing}° ${cardinal} • ${turnDirection}`}
           </span>
         </div>
 
         {/* Distance & Coordinates Row */}
         <div className="grid grid-cols-2 gap-2.5 pt-2">
           <div className="p-3 rounded-2xl bg-qalb-card-subtle dark:bg-qalb-night-subtle text-center">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-qalb-muted">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-qalb-muted font-sans">
               DISTANCE TO KAABA
             </span>
             <div className="text-sm font-serif font-bold text-qalb-ink dark:text-qalb-night-ink mt-0.5 tabular-nums">
@@ -194,7 +172,7 @@ export default function QiblaPage() {
           </div>
 
           <div className="p-3 rounded-2xl bg-qalb-card-subtle dark:bg-qalb-night-subtle text-center">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-qalb-muted">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-qalb-muted font-sans">
               YOUR LOCATION
             </span>
             <div className="text-sm font-serif font-bold text-qalb-ink dark:text-qalb-night-ink mt-0.5 tabular-nums truncate">
@@ -204,7 +182,7 @@ export default function QiblaPage() {
         </div>
       </section>
 
-      {/* Manual Compass Adjust Slider Card (Screenshot 9) */}
+      {/* Manual Compass Adjust Slider Card */}
       <section className="p-4 sm:p-5 rounded-2xl bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border shadow-qalb-card space-y-3">
         <div className="flex items-center justify-between text-xs">
           <span className="font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
@@ -239,7 +217,7 @@ export default function QiblaPage() {
         </div>
       </section>
 
-      {/* How to find Qibla accurately card */}
+      {/* Accuracy Instructions */}
       <section className="p-5 rounded-2xl bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border shadow-qalb-card space-y-3">
         <h3 className="text-xs font-serif font-bold text-qalb-ink dark:text-qalb-night-ink">
           How to find Qibla accurately
