@@ -1,12 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import { Amiri, Plus_Jakarta_Sans } from "next/font/google";
+import { Amiri, Plus_Jakarta_Sans, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { BottomNav } from "@/components/BottomNav";
+import { FloatingDuasButton } from "@/components/FloatingDuasButton";
 
 const amiri = Amiri({
   weight: ["400", "700"],
   subsets: ["arabic", "latin"],
   variable: "--font-amiri",
+  display: "swap",
+});
+
+const playfair = Playfair_Display({
+  weight: ["600", "700", "800"],
+  subsets: ["latin"],
+  variable: "--font-serif",
   display: "swap",
 });
 
@@ -17,13 +25,13 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Nur — Islamic Companion",
-  description: "Live Prayer Times, Hijri Date, and Clean Quran Reader",
+  title: "Qalb — Islamic Companion",
+  description: "Live Prayer Times, Hijri Date, Quran Reader, Tasbih, Adhkar, Qibla, and Ibadah Tracker",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Nur",
+    title: "Qalb",
   },
   icons: {
     icon: "/icon.svg",
@@ -33,7 +41,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#FAF7F2" },
+    { media: "(prefers-color-scheme: light)", color: "#F7F5F0" },
     { media: "(prefers-color-scheme: dark)", color: "#0C1310" },
   ],
   width: "device-width",
@@ -48,7 +56,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <head>
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
         <script
@@ -66,11 +74,12 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${amiri.variable} ${plusJakarta.variable} font-sans min-h-screen bg-sacred-parchment-bg dark:bg-sacred-night-bg text-sacred-ink-primary dark:text-sacred-night-primary antialiased selection:bg-sacred-gold/30 selection:text-current transition-colors duration-200`}
+        className={`${amiri.variable} ${playfair.variable} ${plusJakarta.variable} font-sans min-h-screen bg-qalb-bg dark:bg-qalb-night-bg text-qalb-ink dark:text-qalb-night-ink antialiased selection:bg-qalb-gold/30 selection:text-current transition-colors duration-200`}
       >
-        <div className="mx-auto max-w-lg min-h-screen flex flex-col px-4 pt-4 pb-28">
+        <div className="mx-auto max-w-lg min-h-screen flex flex-col px-4 pt-3 pb-28">
           {children}
         </div>
+        <FloatingDuasButton />
         <BottomNav />
       </body>
     </html>

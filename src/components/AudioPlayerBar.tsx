@@ -76,15 +76,15 @@ export function AudioPlayerBar({
   return (
     <div className="fixed bottom-20 inset-x-0 z-40 flex justify-center px-4 animate-in slide-in-from-bottom duration-200">
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
-      
-      <div className="w-full max-w-lg p-3 sm:p-4 rounded-3xl border shadow-sacred-float backdrop-blur-xl bg-sacred-parchment-card/95 dark:bg-sacred-night-card/95 border-sacred-parchment-border dark:border-sacred-night-border flex flex-col gap-2">
+
+      <div className="w-full max-w-lg p-3 sm:p-4 rounded-3xl border shadow-qalb-float backdrop-blur-xl bg-qalb-card/95 dark:bg-qalb-night-card/95 border-qalb-border dark:border-qalb-night-border flex flex-col gap-2">
         {/* Top Info Row */}
         <div className="flex items-center justify-between">
           <div className="truncate pr-2">
-            <h4 className="text-xs sm:text-sm font-bold text-sacred-ink-primary dark:text-sacred-night-primary truncate font-sans">
+            <h4 className="text-xs sm:text-sm font-serif font-bold text-qalb-ink dark:text-qalb-night-ink truncate">
               {surahName}
             </h4>
-            <p className="text-[11px] text-sacred-gold font-medium truncate">
+            <p className="text-[11px] text-qalb-gold font-medium truncate font-sans">
               {reciterName}
             </p>
           </div>
@@ -95,14 +95,14 @@ export function AudioPlayerBar({
                 if (audioRef.current) audioRef.current.currentTime = 0;
               }}
               title="Restart"
-              className="p-1.5 rounded-full text-sacred-ink-secondary dark:text-sacred-night-secondary hover:text-sacred-ink-primary dark:hover:text-white"
+              className="p-1.5 rounded-full text-qalb-muted hover:text-qalb-ink dark:hover:text-white"
             >
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={toggleMute}
               title={isMuted ? "Unmute" : "Mute"}
-              className="p-1.5 rounded-full text-sacred-ink-secondary dark:text-sacred-night-secondary hover:text-sacred-ink-primary dark:hover:text-white"
+              className="p-1.5 rounded-full text-qalb-muted hover:text-qalb-ink dark:hover:text-white"
             >
               {isMuted ? <VolumeX className="w-4 h-4 text-red-500" /> : <Volume2 className="w-4 h-4" />}
             </button>
@@ -110,7 +110,7 @@ export function AudioPlayerBar({
               <button
                 onClick={onClose}
                 title="Close player"
-                className="p-1.5 rounded-full text-sacred-ink-secondary dark:text-sacred-night-secondary hover:text-sacred-ink-primary dark:hover:text-white"
+                className="p-1.5 rounded-full text-qalb-muted hover:text-qalb-ink dark:hover:text-white"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -120,7 +120,7 @@ export function AudioPlayerBar({
 
         {/* Progress Slider */}
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-sacred-ink-muted dark:text-sacred-night-muted tabular-nums w-8">
+          <span className="text-[10px] text-qalb-muted tabular-nums w-8 font-sans">
             {formatTime(currentTime)}
           </span>
           <input
@@ -129,16 +129,16 @@ export function AudioPlayerBar({
             max={duration || 100}
             value={currentTime}
             onChange={handleSeek}
-            className="flex-1 h-1.5 bg-sacred-parchment-border dark:bg-sacred-night-border rounded-lg appearance-none cursor-pointer accent-sacred-emerald dark:accent-sacred-gold"
+            className="flex-1 h-1.5 bg-qalb-card-subtle dark:bg-qalb-night-subtle rounded-lg appearance-none cursor-pointer accent-qalb-green dark:accent-qalb-gold"
           />
-          <span className="text-[10px] text-sacred-ink-muted dark:text-sacred-night-muted tabular-nums w-8 text-right">
+          <span className="text-[10px] text-qalb-muted tabular-nums w-8 text-right font-sans">
             {formatTime(duration)}
           </span>
 
           <button
             onClick={togglePlay}
             aria-label={isPlaying ? "Pause recitation" : "Play recitation"}
-            className="flex items-center justify-center w-8 h-8 rounded-full bg-sacred-emerald dark:bg-sacred-gold text-white dark:text-sacred-night-bg hover:opacity-90 active:scale-95 transition-all shadow-sm shrink-0 ml-1"
+            className="flex items-center justify-center w-8 h-8 rounded-full bg-qalb-green dark:bg-qalb-gold text-white dark:text-qalb-night-bg hover:opacity-90 active:scale-95 transition-all shadow-sm shrink-0 ml-1"
           >
             {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
           </button>

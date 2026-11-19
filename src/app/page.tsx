@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { LocationSelector } from "@/components/LocationSelector";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { PrayerHero } from "@/components/PrayerHero";
-import { PrayerRibbon } from "@/components/PrayerRibbon";
-import { QuickWidgets } from "@/components/QuickWidgets";
+import { HomeHeader } from "@/components/HomeHeader";
+import { HijriQiblaBanner } from "@/components/HijriQiblaBanner";
+import { NextPrayerCard } from "@/components/NextPrayerCard";
+import { TodayPrayersGrid } from "@/components/TodayPrayersGrid";
+import { HomeStatBadges } from "@/components/HomeStatBadges";
+import { DailyAyahCard } from "@/components/DailyAyahCard";
+import { QuickAccessList } from "@/components/QuickAccessList";
 import { DEFAULT_LOCATIONS, getPrayerTimesByCity, getPrayerTimesByCoords, computePrayerSchedule } from "@/services/aladhan";
 import { AladhanApiResponse, LocationConfig, PrayerItem } from "@/types/prayer";
-import { Sparkles, AlertCircle, RefreshCw } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
 
 export default function HomePage() {
   const [currentLocation, setCurrentLocation] = useState<LocationConfig>(DEFAULT_LOCATIONS[0]);
@@ -32,15 +34,14 @@ export default function HomePage() {
       setPrayers(computed.prayers);
     } catch (err: any) {
       console.error("Prayer fetch error:", err);
-      setError("Unable to load live prayer times. Please check your connection.");
+      setError("Unable to load live prayer times. Please check your internet connection.");
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    // Check if user stored a preferred location
-    const stored = localStorage.getItem("nur-location");
+    const stored = localStorage.getItem("qalb-location");
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
@@ -56,50 +57,22 @@ export default function HomePage() {
 
   const handleSelectLocation = (loc: LocationConfig) => {
     setCurrentLocation(loc);
-    localStorage.setItem("nur-location", JSON.stringify(loc));
+    localStorage.setItem("qalb-location", JSON.stringify(loc));
     loadPrayerTimes(loc);
   };
 
   return (
-    <main className="space-y-6">
-      {/* Top Header */}
-      <header className="flex items-center justify-between pt-2 pb-1">
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center justify-center w-9 h-9 rounded-2xl bg-sacred-emerald dark:bg-sacred-emerald-dark text-sacred-gold shadow-sm border border-sacred-gold/30">
-            <span className="font-amiri text-lg font-bold">ن</span>
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <h1 className="text-base font-bold tracking-tight text-sacred-ink-primary dark:text-sacred-night-primary font-sans">
-                Nur
-              </h1>
-              <span
-                dir="rtl"
-                lang="ar"
-                className="font-amiri text-xs font-semibold text-sacred-gold"
-              >
-                نُور
-              </span>
-            </div>
-            <p className="text-[11px] text-sacred-ink-muted dark:text-sacred-night-muted">
-              Sacred Companion
-            </p>
-          </div>
-        </div>
+    <main className="space-y-4">
+      {/* 1. App Header: As-Salamu Alaykum + Location + Action Icons */}
+      <HomeHeader
+        currentLocation={currentLocation}
+        onSelectLocation={handleSelectLocation}
+        isLoading={isLoading}
+      />
 
-        <div className="flex items-center gap-2">
-          <LocationSelector
-            currentLocation={currentLocation}
-            onSelectLocation={handleSelectLocation}
-            isLoading={isLoading}
-          />
-          <ThemeToggle />
-        </div>
-      </header>
-
-      {/* Error state if API fails */}
+      {/* Error state */}
       {error && (
-        <div className="flex items-center justify-between p-4 rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400 text-xs">
+        <div className="flex items-center justify-between p-3.5 rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400 text-xs">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
@@ -114,22 +87,40 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Main Hero Card */}
+      {/* 2. Top Hijri & Qibla Banner Card */}
       {isLoading && !apiData ? (
-        <div className="w-full h-56 rounded-3xl animate-pulse bg-sacred-emerald/20 dark:bg-sacred-night-card border border-sacred-parchment-border dark:border-sacred-night-border" />
+        <div className="w-full h-28 rounded-3xl animate-pulse bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border" />
       ) : apiData ? (
-        <PrayerHero
-          timings={apiData.timings}
+        <HijriQiblaBanner
           hijriDate={apiData.date.hijri}
-          onScheduleUpdate={setPrayers}
+          qiblaBearing={58}
         />
       ) : null}
 
-      {/* Prayer Schedule Daily Ribbon */}
-      {prayers.length > 0 && <PrayerRibbon prayers={prayers} />}
+      {/* 3. Next Prayer Card with Live Countdown & Progress Bar */}
+      {apiData && (
+        <NextPrayerCard
+          timings={apiData.timings}
+          onScheduleUpdate={setPrayers}
+        />
+      )}
 
-      {/* Quick Navigation Widgets */}
-      <QuickWidgets />
+      {/* 4. Today's Prayers Rectangles (Adjusted 2-column grid, zero wasted space) */}
+      {prayers.length > 0 && (
+        <TodayPrayersGrid
+          prayers={prayers}
+          onOpenTimetable={() => {}}
+        />
+      )}
+
+      {/* 5. Stat Badges (Tasbih today, Morning Adhkar, Salah streak) */}
+      <HomeStatBadges />
+
+      {/* 6. Daily Ayah Card with Verified Scripture & Vocal Audio */}
+      <DailyAyahCard />
+
+      {/* 7. Quick Access Rectangles & Privacy Banner */}
+      <QuickAccessList />
     </main>
   );
 }

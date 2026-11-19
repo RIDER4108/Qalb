@@ -6,7 +6,6 @@ import { getChapterDetails, getChapterVerses, getChapterAudio, DEFAULT_RECITER_N
 import { Chapter, Verse } from "@/types/quran";
 import { QuranReader } from "@/components/QuranReader";
 import { AudioPlayerBar } from "@/components/AudioPlayerBar";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { ArrowLeft, ChevronLeft, ChevronRight, AlertCircle, RefreshCw } from "lucide-react";
 
 interface SurahPageProps {
@@ -46,7 +45,6 @@ export default function SurahDetailPage({ params }: SurahPageProps) {
         setChapter(chData);
         setVerses(vData.verses);
 
-        // Fetch vocal-only audio
         try {
           const audioData = await getChapterAudio(surahId);
           setAudioUrl(audioData.audio_file.audio_url);
@@ -68,32 +66,30 @@ export default function SurahDetailPage({ params }: SurahPageProps) {
   const nextSurahId = surahId < 114 ? surahId + 1 : null;
 
   return (
-    <main className="space-y-6">
+    <main className="space-y-4">
       {/* Top Header */}
-      <header className="flex items-center justify-between pt-2 pb-1">
+      <header className="flex items-center justify-between pt-1 pb-1">
         <div className="flex items-center gap-3">
           <Link
             href="/quran"
-            className="flex items-center justify-center w-9 h-9 rounded-full border border-sacred-parchment-border dark:border-sacred-night-border bg-sacred-parchment-card dark:bg-sacred-night-card text-sacred-ink-secondary dark:text-sacred-night-secondary hover:text-sacred-gold hover:border-sacred-gold transition-colors"
+            className="flex items-center justify-center w-9 h-9 rounded-full border border-qalb-border dark:border-qalb-night-border bg-qalb-card dark:bg-qalb-night-card text-qalb-ink dark:text-qalb-night-ink hover:text-qalb-gold hover:border-qalb-gold transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div className="truncate">
-            <h1 className="text-base font-bold tracking-tight text-sacred-ink-primary dark:text-sacred-night-primary font-sans truncate">
+            <h1 className="text-base font-serif font-bold tracking-tight text-qalb-ink dark:text-qalb-night-ink truncate">
               {chapter ? chapter.name_simple : `Surah ${surahId}`}
             </h1>
-            <p className="text-xs text-sacred-ink-muted dark:text-sacred-night-muted">
+            <p className="text-[11px] text-qalb-muted font-sans">
               {chapter ? `${chapter.name_complex} • Chapter ${chapter.id}` : "Loading..."}
             </p>
           </div>
         </div>
-
-        <ThemeToggle />
       </header>
 
       {/* Error state */}
       {error && (
-        <div className="flex items-center justify-between p-4 rounded-2xl bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 text-xs">
+        <div className="flex items-center justify-between p-3.5 rounded-2xl bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 text-xs">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
@@ -110,12 +106,12 @@ export default function SurahDetailPage({ params }: SurahPageProps) {
 
       {/* Loading Skeleton */}
       {isLoading && (
-        <div className="space-y-4">
-          <div className="h-48 rounded-3xl animate-pulse bg-sacred-parchment-card dark:bg-sacred-night-card border border-sacred-parchment-border dark:border-sacred-night-border" />
-          {Array.from({ length: 5 }).map((_, i) => (
+        <div className="space-y-3">
+          <div className="h-44 rounded-3xl animate-pulse bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border" />
+          {Array.from({ length: 4 }).map((_, i) => (
             <div
               key={i}
-              className="h-32 rounded-3xl animate-pulse bg-sacred-parchment-card dark:bg-sacred-night-card border border-sacred-parchment-border dark:border-sacred-night-border"
+              className="h-28 rounded-3xl animate-pulse bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border"
             />
           ))}
         </div>
@@ -136,11 +132,11 @@ export default function SurahDetailPage({ params }: SurahPageProps) {
           />
 
           {/* Surah Navigation (Prev / Next) */}
-          <nav className="flex items-center justify-between pt-6 pb-8 border-t border-sacred-parchment-border dark:border-sacred-night-border">
+          <nav className="flex items-center justify-between pt-4 pb-8 border-t border-qalb-border dark:border-qalb-night-border">
             {prevSurahId ? (
               <Link
                 href={`/quran/${prevSurahId}`}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-semibold border transition-all bg-sacred-parchment-card dark:bg-sacred-night-card border-sacred-parchment-border dark:border-sacred-night-border hover:border-sacred-gold text-sacred-ink-primary dark:text-sacred-night-primary shadow-sm"
+                className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold border transition-all bg-qalb-card dark:bg-qalb-night-card border-qalb-border dark:border-qalb-night-border hover:border-qalb-gold text-qalb-ink dark:text-qalb-night-ink shadow-sm"
               >
                 <ChevronLeft className="w-4 h-4" />
                 <span>Previous Surah</span>
@@ -152,7 +148,7 @@ export default function SurahDetailPage({ params }: SurahPageProps) {
             {nextSurahId ? (
               <Link
                 href={`/quran/${nextSurahId}`}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-semibold border transition-all bg-sacred-parchment-card dark:bg-sacred-night-card border-sacred-parchment-border dark:border-sacred-night-border hover:border-sacred-gold text-sacred-ink-primary dark:text-sacred-night-primary shadow-sm"
+                className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold border transition-all bg-qalb-card dark:bg-qalb-night-card border-qalb-border dark:border-qalb-night-border hover:border-qalb-gold text-qalb-ink dark:text-qalb-night-ink shadow-sm"
               >
                 <span>Next Surah</span>
                 <ChevronRight className="w-4 h-4" />

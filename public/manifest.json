@@ -1,11 +1,11 @@
 {
-  "name": "Nur — Islamic Companion",
-  "short_name": "Nur",
-  "description": "Daily Prayer Times, Hijri Date, and Clean Quran Reader",
+  "name": "Qalb — Islamic Companion",
+  "short_name": "Qalb",
+  "description": "Daily Prayer Times, Hijri Date, Quran Reader, Tasbih, Adhkar, Qibla, and Ibadah Tracker",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0C1310",
-  "theme_color": "#144534",
+  "background_color": "#F7F5F0",
+  "theme_color": "#11382B",
   "orientation": "portrait-primary",
   "icons": [
     {
