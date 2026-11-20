@@ -324,7 +324,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const isPrayerCompletedToday = (prayerName: string) => {
-    return isPrayerCompletedForDate(getTodayKey(), prayerName);
+    return isPrayerCompletedForDate(todayKey, prayerName);
   };
 
   const togglePrayerForDate = (dateKey: string, prayerName: string) => {
@@ -345,11 +345,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const togglePrayerToday = (prayerName: string) => {
-    togglePrayerForDate(getTodayKey(), prayerName);
+    togglePrayerForDate(todayKey, prayerName);
   };
 
   // Completed Fard prayers today
-  const todayKey = getTodayKey();
   const todayFardCompleted = ["fajr", "dhuhr", "asr", "maghrib", "isha"].filter(
     (p) => Boolean(prayerHistory[todayKey]?.[p])
   ).length;
@@ -382,7 +381,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const toggleHabit = (habitKey: keyof HabitStatus) => {
-    toggleHabitForDate(getTodayKey(), habitKey);
+    toggleHabitForDate(todayKey, habitKey);
   };
 
   // Tasbih actions

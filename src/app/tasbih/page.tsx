@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Smartphone, Plus, RotateCcw, Volume2, VolumeX, AlertTriangle } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 
