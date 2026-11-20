@@ -5,6 +5,9 @@ import { LocationConfig, PrayerItem, PrayerTimings, HijriDate, AladhanApiRespons
 import { DEFAULT_LOCATIONS, getPrayerTimesByCity, getPrayerTimesByCoords, computePrayerSchedule } from "@/services/aladhan";
 import { computeQibla, QiblaCalculationResult } from "@/utils/qibla";
 import { ADHKAR_COLLECTION } from "@/data/adhkar";
+import { DhikrPreset, DEFAULT_PRESETS } from "@/data/tasbihPresets";
+
+export { type DhikrPreset, DEFAULT_PRESETS } from "@/data/tasbihPresets";
 
 export interface HabitStatus {
   sunnah: boolean;
