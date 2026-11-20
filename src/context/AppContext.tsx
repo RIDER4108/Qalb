@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { LocationConfig, PrayerItem, PrayerTimings, HijriDate, AladhanApiResponse } from "@/types/prayer";
 import { DEFAULT_LOCATIONS, getPrayerTimesByCity, getPrayerTimesByCoords, computePrayerSchedule } from "@/services/aladhan";
 import { computeQibla, QiblaCalculationResult } from "@/utils/qibla";
@@ -53,6 +53,7 @@ export interface AppContextType {
   tasbihTodayTotal: number;
   tasbihHistory: Record<string, number>;
   tasbihProgress: Record<string, TasbihProgressItem>;
+  tasbihPresets: DhikrPreset[];
   activeTasbihId: string;
   setActiveTasbihId: (id: string) => void;
   incrementTasbih: (target: number, tasbihId?: string) => void;
@@ -61,6 +62,9 @@ export interface AppContextType {
   resetTasbihCycles: (tasbihId?: string) => void;
   resetTasbihTotal: () => void;
   deleteTasbihProgress: (tasbihId: string) => void;
+  addTasbih: (presetData: Omit<DhikrPreset, "id"> | DhikrPreset) => DhikrPreset;
+  editTasbih: (id: string, updatedFields: Partial<DhikrPreset>) => void;
+  deleteTasbih: (id: string) => void;
 
   // GPS
   gpsPermissionDenied: boolean;
@@ -119,6 +123,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [tasbihProgress, setTasbihProgress] = useState<Record<string, TasbihProgressItem>>({});
   const [tasbihTodayTotal, setTasbihTodayTotal] = useState<number>(0);
   const [tasbihHistory, setTasbihHistory] = useState<Record<string, number>>({});
+  const [tasbihPresets, setTasbihPresets] = useState<DhikrPreset[]>(DEFAULT_PRESETS);
+  const isTasbihHydratedRef = useRef<boolean>(false);
 
   const currentActiveProgress = tasbihProgress[activeTasbihId] || { count: 0, cycles: 0 };
   const tasbihCount = currentActiveProgress.count;
@@ -211,7 +217,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     setTasbihProgress(loadedItems);
-    setActiveTasbihId(savedActiveId);
+
+    // Hydrate Tasbih Presets
+    let loadedPresets: DhikrPreset[] = DEFAULT_PRESETS;
+    try {
+      const savedPresets = localStorage.getItem("qalb-tasbih-presets") || localStorage.getItem("qalb-tasbih-list");
+      if (savedPresets) {
+        const parsed = JSON.parse(savedPresets);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          loadedPresets = parsed;
+        }
+      } else {
+        const savedCustoms = localStorage.getItem("qalb-custom-tasbihs");
+        if (savedCustoms) {
+          const parsedCustoms = JSON.parse(savedCustoms);
+          if (Array.isArray(parsedCustoms) && parsedCustoms.length > 0) {
+            loadedPresets = [...DEFAULT_PRESETS, ...parsedCustoms];
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load tasbih presets:", e);
+    }
+    setTasbihPresets(loadedPresets);
+    isTasbihHydratedRef.current = true;
+
+    // Active Tasbih restoration
+    const savedSelectedId = localStorage.getItem("qalb-selected-tasbih-id");
+    let chosenActiveId = savedActiveId;
+    if (savedSelectedId) {
+      chosenActiveId = savedSelectedId;
+    }
+    if (loadedPresets.some((p) => p.id === chosenActiveId)) {
+      setActiveTasbihId(chosenActiveId);
+    } else if (loadedPresets.length > 0) {
+      setActiveTasbihId(loadedPresets[0].id);
+    }
 
     // Check if the saved date matches today's local date (YYYY-MM-DD)
     const savedDate = localStorage.getItem("qalb-active-date");
@@ -261,6 +302,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } catch (e) {}
     }
   }, []);
+
+  // Persist Tasbih Presets to localStorage (guarded against hydration overwrite)
+  useEffect(() => {
+    if (!isTasbihHydratedRef.current) return;
+    try {
+      localStorage.setItem("qalb-tasbih-presets", JSON.stringify(tasbihPresets));
+      localStorage.setItem("qalb-tasbih-list", JSON.stringify(tasbihPresets));
+      const customOnly = tasbihPresets.filter((p) => p.isCustom || p.id.startsWith("custom-"));
+      localStorage.setItem("qalb-custom-tasbihs", JSON.stringify(customOnly));
+    } catch (e) {
+      console.error("Failed to persist tasbih presets:", e);
+    }
+  }, [tasbihPresets]);
 
   // Update Qibla when location changes
   useEffect(() => {
@@ -552,6 +606,85 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const selectTasbih = useCallback((id: string) => {
+    setActiveTasbihId(id);
+    try {
+      localStorage.setItem("qalb-selected-tasbih-id", id);
+    } catch (e) {}
+  }, []);
+
+  const addTasbih = useCallback((presetData: Omit<DhikrPreset, "id"> | DhikrPreset): DhikrPreset => {
+    const id = "id" in presetData && presetData.id ? presetData.id : `custom-${Date.now()}`;
+    const newPreset: DhikrPreset = {
+      id,
+      name: presetData.name,
+      arabic: presetData.arabic,
+      meaning: presetData.meaning || "Custom Dhikr",
+      target: presetData.target || 33,
+      isCustom: true,
+    };
+
+    setTasbihPresets((prev) => {
+      const updated = [...prev, newPreset];
+      try {
+        localStorage.setItem("qalb-tasbih-presets", JSON.stringify(updated));
+        localStorage.setItem("qalb-tasbih-list", JSON.stringify(updated));
+        const customOnly = updated.filter((p) => p.isCustom || p.id.startsWith("custom-"));
+        localStorage.setItem("qalb-custom-tasbihs", JSON.stringify(customOnly));
+      } catch (e) {}
+      return updated;
+    });
+
+    selectTasbih(id);
+    return newPreset;
+  }, [selectTasbih]);
+
+  const editTasbih = useCallback((id: string, updatedFields: Partial<DhikrPreset>) => {
+    setTasbihPresets((prev) => {
+      const updated = prev.map((p) => {
+        if (p.id === id) {
+          return { ...p, ...updatedFields };
+        }
+        return p;
+      });
+      try {
+        localStorage.setItem("qalb-tasbih-presets", JSON.stringify(updated));
+        localStorage.setItem("qalb-tasbih-list", JSON.stringify(updated));
+        const customOnly = updated.filter((p) => p.isCustom || p.id.startsWith("custom-"));
+        localStorage.setItem("qalb-custom-tasbihs", JSON.stringify(customOnly));
+      } catch (e) {}
+      return updated;
+    });
+  }, []);
+
+  const deleteTasbih = useCallback((id: string) => {
+    setTasbihPresets((prev) => {
+      if (prev.length <= 1) return prev; // Protect very last remaining Tasbih
+      const updated = prev.filter((p) => p.id !== id);
+      try {
+        localStorage.setItem("qalb-tasbih-presets", JSON.stringify(updated));
+        localStorage.setItem("qalb-tasbih-list", JSON.stringify(updated));
+        const customOnly = updated.filter((p) => p.isCustom || p.id.startsWith("custom-"));
+        localStorage.setItem("qalb-custom-tasbihs", JSON.stringify(customOnly));
+      } catch (e) {}
+
+      // If active tasbih was deleted, switch active to the first remaining tasbih
+      setActiveTasbihId((currentActiveId) => {
+        if (currentActiveId === id) {
+          const nextId = updated[0]?.id || DEFAULT_PRESETS[0].id;
+          try {
+            localStorage.setItem("qalb-selected-tasbih-id", nextId);
+          } catch (e) {}
+          return nextId;
+        }
+        return currentActiveId;
+      });
+
+      return updated;
+    });
+    deleteTasbihProgress(id);
+  }, [deleteTasbihProgress]);
+
   // Adhkar actions
   const incrementAdhkar = (id: string, target: number) => {
     setAdhkarCounts((prev) => {
@@ -641,14 +774,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         tasbihTodayTotal,
         tasbihHistory,
         tasbihProgress,
+        tasbihPresets,
         activeTasbihId,
-        setActiveTasbihId,
+        setActiveTasbihId: selectTasbih,
         incrementTasbih,
         resetTasbih,
         resetTasbihCount,
         resetTasbihCycles,
         resetTasbihTotal,
         deleteTasbihProgress,
+        addTasbih,
+        editTasbih,
+        deleteTasbih,
         gpsPermissionDenied,
         requestGpsLocation,
         adhkarCounts,

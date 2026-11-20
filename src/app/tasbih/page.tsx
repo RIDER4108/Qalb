@@ -21,17 +21,23 @@ export default function TasbihPage() {
     tasbihTodayTotal,
     tasbihHistory,
     tasbihProgress,
+    tasbihPresets,
     activeTasbihId,
     setActiveTasbihId,
     incrementTasbih,
     resetTasbihCount,
     resetTasbihCycles,
     resetTasbihTotal,
-    deleteTasbihProgress,
+    addTasbih,
+    editTasbih,
+    deleteTasbih,
   } = useApp();
 
-  const [presets, setPresets] = useState<DhikrPreset[]>(DEFAULT_PRESETS);
-  const [selectedPreset, setSelectedPreset] = useState<DhikrPreset>(DEFAULT_PRESETS[0]);
+  const selectedPreset =
+    tasbihPresets.find((p) => p.id === activeTasbihId) ||
+    tasbihPresets[0] ||
+    DEFAULT_PRESETS[0];
+
   const [hapticEnabled, setHapticEnabled] = useState<boolean>(true);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(false);
   const [isPressing, setIsPressing] = useState<boolean>(false);
@@ -51,41 +57,6 @@ export default function TasbihPage() {
   const [formMeaning, setFormMeaning] = useState("");
   const [formTarget, setFormTarget] = useState("33");
 
-  // Hydrate custom presets & selected preset on mount
-  useEffect(() => {
-    const savedList = localStorage.getItem("qalb-tasbih-list");
-    const savedCustoms = localStorage.getItem("qalb-custom-tasbihs");
-    let loadedPresets: DhikrPreset[] = DEFAULT_PRESETS;
-
-    if (savedList) {
-      try {
-        const parsed = JSON.parse(savedList);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          loadedPresets = parsed;
-        }
-      } catch (e) {}
-    } else if (savedCustoms) {
-      try {
-        const parsedCustoms = JSON.parse(savedCustoms);
-        if (Array.isArray(parsedCustoms) && parsedCustoms.length > 0) {
-          loadedPresets = [...DEFAULT_PRESETS, ...parsedCustoms];
-        }
-      } catch (e) {}
-    }
-
-    setPresets(loadedPresets);
-
-    const savedSelectedId = localStorage.getItem("qalb-selected-tasbih-id");
-    let initialSelected = loadedPresets[0];
-    if (savedSelectedId) {
-      const match = loadedPresets.find((p) => p.id === savedSelectedId);
-      if (match) initialSelected = match;
-    }
-
-    setSelectedPreset(initialSelected);
-    setActiveTasbihId(initialSelected.id);
-  }, [setActiveTasbihId]);
-
   // Close dropdown on scroll
   useEffect(() => {
     if (!menuAnchor) return;
@@ -94,24 +65,8 @@ export default function TasbihPage() {
     return () => window.removeEventListener("scroll", handleScroll, true);
   }, [menuAnchor]);
 
-  // Persist presets helper
-  const persistPresets = (updatedList: DhikrPreset[]) => {
-    setPresets(updatedList);
-    try {
-      localStorage.setItem("qalb-tasbih-list", JSON.stringify(updatedList));
-      const customOnly = updatedList.filter(
-        (p) => p.isCustom || p.id.startsWith("custom-")
-      );
-      localStorage.setItem("qalb-custom-tasbihs", JSON.stringify(customOnly));
-    } catch (e) {}
-  };
-
   const handleSelectPreset = (preset: DhikrPreset) => {
-    setSelectedPreset(preset);
     setActiveTasbihId(preset.id);
-    try {
-      localStorage.setItem("qalb-selected-tasbih-id", preset.id);
-    } catch (e) {}
   };
 
   const handleOpenAddModal = () => {
@@ -138,23 +93,7 @@ export default function TasbihPage() {
 
   const handleDeletePreset = (presetId: string) => {
     setMenuAnchor(null);
-    if (presets.length <= 1) {
-      return; // Prevent deleting the very last remaining Tasbih
-    }
-
-    const updatedList = presets.filter((p) => p.id !== presetId);
-    persistPresets(updatedList);
-    deleteTasbihProgress(presetId);
-
-    // If the deleted Tasbih was currently selected, automatically switch selection to first remaining
-    if (selectedPreset.id === presetId) {
-      const nextSelected = updatedList[0];
-      setSelectedPreset(nextSelected);
-      setActiveTasbihId(nextSelected.id);
-      try {
-        localStorage.setItem("qalb-selected-tasbih-id", nextSelected.id);
-      } catch (e) {}
-    }
+    deleteTasbih(presetId);
   };
 
   const handleSubmitModal = () => {
@@ -165,44 +104,19 @@ export default function TasbihPage() {
     const arabicText = formArabic.trim() || trimmedName;
 
     if (modalMode === "edit" && editingPresetId) {
-      const updatedList = presets.map((p) => {
-        if (p.id === editingPresetId) {
-          return {
-            ...p,
-            name: trimmedName,
-            arabic: arabicText,
-            target: targetNum,
-          };
-        }
-        return p;
+      editTasbih(editingPresetId, {
+        name: trimmedName,
+        arabic: arabicText,
+        target: targetNum,
       });
-      persistPresets(updatedList);
-
-      if (selectedPreset.id === editingPresetId) {
-        const updatedSelected = updatedList.find((p) => p.id === editingPresetId);
-        if (updatedSelected) {
-          setSelectedPreset(updatedSelected);
-        }
-      }
       setShowModal(false);
     } else {
-      const newPreset: DhikrPreset = {
-        id: `custom-${Date.now()}`,
+      addTasbih({
         name: trimmedName,
         arabic: arabicText,
         meaning: formMeaning.trim() || "Custom Dhikr",
         target: targetNum,
-        isCustom: true,
-      };
-      const updatedList = [...presets, newPreset];
-      persistPresets(updatedList);
-
-      setSelectedPreset(newPreset);
-      setActiveTasbihId(newPreset.id);
-      try {
-        localStorage.setItem("qalb-selected-tasbih-id", newPreset.id);
-      } catch (e) {}
-
+      });
       setShowModal(false);
     }
   };
@@ -334,7 +248,7 @@ export default function TasbihPage() {
 
       {/* Preset Pills Carousel */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
-        {presets.map((preset) => {
+        {tasbihPresets.map((preset) => {
           const isSelected = selectedPreset.id === preset.id;
           return (
             <div key={preset.id} className="relative shrink-0">
@@ -655,7 +569,7 @@ export default function TasbihPage() {
             <button
               type="button"
               onClick={() => {
-                const targetPreset = presets.find((p) => p.id === menuAnchor.id);
+                const targetPreset = tasbihPresets.find((p) => p.id === menuAnchor.id);
                 if (targetPreset) handleOpenEditModal(targetPreset);
                 setMenuAnchor(null);
               }}
@@ -667,17 +581,17 @@ export default function TasbihPage() {
 
             <button
               type="button"
-              disabled={presets.length <= 1}
+              disabled={tasbihPresets.length <= 1}
               onClick={() => {
                 handleDeletePreset(menuAnchor.id);
                 setMenuAnchor(null);
               }}
               className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors ${
-                presets.length <= 1
+                tasbihPresets.length <= 1
                   ? "text-qalb-muted/40 cursor-not-allowed"
                   : "text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30"
               }`}
-              title={presets.length <= 1 ? "Cannot delete the last remaining Tasbih" : "Delete Tasbih"}
+              title={tasbihPresets.length <= 1 ? "Cannot delete the last remaining Tasbih" : "Delete Tasbih"}
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span>Delete</span>
