@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Flame, Check, Moon, BookOpen, Sparkles, Trophy, Calendar, CheckCircle2, Lock } from "lucide-react";
-import { useApp, getTodayKey, HabitStatus } from "@/context/AppContext";
+import { useApp, HabitStatus } from "@/context/AppContext";
 
 interface HabitDefinition {
   key: keyof HabitStatus;
@@ -42,6 +42,7 @@ const HABIT_DEFINITIONS: HabitDefinition[] = [
 
 export default function TrackerPage() {
   const {
+    todayKey,
     prayers,
     isPrayerCompletedForDate,
     togglePrayerForDate,
@@ -50,10 +51,12 @@ export default function TrackerPage() {
     streakDays,
   } = useApp();
 
-  const todayKey = getTodayKey();
+  const [selectedDateKey, setSelectedDateKey] = useState<string>(todayKey);
+  const [clientWeekday, setClientWeekday] = useState<string>("");
+  const [clientTodayKey, setClientTodayKey] = useState<string>(todayKey);
 
-  // Generate 6 days ending on tomorrow or centered on today
-  const weekDays = useMemo(() => {
+  // Compute 6 dynamic days strip centered on local today
+  const generateWeekDays = useCallback((baseKey: string) => {
     const list: { dayName: string; dateNum: number; dateKey: string; isToday: boolean }[] = [];
     const now = new Date();
     // 4 days prior, today, 1 day after
@@ -69,13 +72,25 @@ export default function TrackerPage() {
         dayName,
         dateNum,
         dateKey,
-        isToday: dateKey === todayKey,
+        isToday: dateKey === baseKey,
       });
     }
     return list;
-  }, [todayKey]);
+  }, []);
 
-  const [selectedDateKey, setSelectedDateKey] = useState<string>(todayKey);
+  const [weekDays, setWeekDays] = useState<{ dayName: string; dateNum: number; dateKey: string; isToday: boolean }[]>(
+    () => generateWeekDays(todayKey)
+  );
+
+  // Refresh client weekday, selected date, and week days strictly on client mount in user's local timezone
+  useEffect(() => {
+    const now = new Date();
+    const currentWeekdayName = now.toLocaleDateString("en-US", { weekday: "long" });
+    setClientWeekday(currentWeekdayName);
+    setClientTodayKey(todayKey);
+    setSelectedDateKey(todayKey);
+    setWeekDays(generateWeekDays(todayKey));
+  }, [todayKey, generateWeekDays]);
 
   // Fard prayers (excluding Sunrise)
   const fardPrayers = useMemo(() => {
@@ -94,11 +109,28 @@ export default function TrackerPage() {
   const totalPossible = fardPrayers.length + HABIT_DEFINITIONS.length; // 5 + 3 = 8
   const completionPercent = totalPossible > 0 ? Math.round((totalCompleted / totalPossible) * 100) : 0;
 
-  // Selected date human label
-  const selectedDateObj = new Date(selectedDateKey + "T00:00:00");
-  const selectedDayLabel = selectedDateKey === todayKey
-    ? `Today (${selectedDateObj.toLocaleDateString("en-US", { weekday: "long" })})`
-    : selectedDateObj.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+  // Selected date human labels computed dynamically from selectedDateKey
+  const selectedDateObj = useMemo(() => {
+    const parts = selectedDateKey.split("-").map(Number);
+    if (parts.length === 3) {
+      return new Date(parts[0], parts[1] - 1, parts[2]);
+    }
+    return new Date();
+  }, [selectedDateKey]);
+
+  const isSelectedToday = selectedDateKey === clientTodayKey;
+
+  const selectedWeekdayName = useMemo(() => {
+    return selectedDateObj.toLocaleDateString("en-US", { weekday: "long" });
+  }, [selectedDateObj]);
+
+  const selectedFullLabel = useMemo(() => {
+    return selectedDateObj.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "short",
+      day: "numeric",
+    });
+  }, [selectedDateObj]);
 
   return (
     <main className="space-y-4">
@@ -175,10 +207,10 @@ export default function TrackerPage() {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-xs font-bold text-qalb-ink dark:text-qalb-night-ink">
-              {selectedDayLabel}
+              {isSelectedToday ? "Today's Ibadah" : selectedFullLabel}
             </h3>
             <p className="text-[11px] text-qalb-muted font-sans">
-              {totalCompleted}/{totalPossible} completed
+              {isSelectedToday ? (clientWeekday || selectedWeekdayName) : selectedWeekdayName} • {totalCompleted}/{totalPossible} completed
             </p>
           </div>
 

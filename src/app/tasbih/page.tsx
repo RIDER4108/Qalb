@@ -78,15 +78,25 @@ export default function TasbihPage() {
   const remainingInCycle = target - tasbihCount;
   const percentInCycle = Math.min(100, Math.round((tasbihCount / target) * 100));
 
-  // Weekly dummy data
+  // Dynamic day highlight for the weekly bar chart (Mon=0..Sun=6)
+  const [activeDayIdx, setActiveDayIdx] = useState<number>(() => {
+    const d = new Date().getDay();
+    return d === 0 ? 6 : d - 1;
+  });
+
+  useEffect(() => {
+    const d = new Date().getDay();
+    setActiveDayIdx(d === 0 ? 6 : d - 1);
+  }, []);
+
   const weekData = [
-    { day: "M", height: "45%", active: false },
-    { day: "T", height: "60%", active: false },
-    { day: "W", height: "40%", active: false },
-    { day: "T", height: "90%", active: true },
-    { day: "F", height: "30%", active: false },
-    { day: "S", height: "20%", active: false },
-    { day: "S", height: "15%", active: false },
+    { day: "M", height: "45%", active: activeDayIdx === 0 },
+    { day: "T", height: "60%", active: activeDayIdx === 1 },
+    { day: "W", height: "40%", active: activeDayIdx === 2 },
+    { day: "T", height: "70%", active: activeDayIdx === 3 },
+    { day: "F", height: "85%", active: activeDayIdx === 4 },
+    { day: "S", height: "30%", active: activeDayIdx === 5 },
+    { day: "S", height: "20%", active: activeDayIdx === 6 },
   ];
 
   return (

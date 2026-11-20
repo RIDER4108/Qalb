@@ -1,15 +1,19 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Navigation, Locate, AlertCircle } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 
 export default function QiblaPage() {
   const { currentLocation, qiblaInfo, requestGpsLocation, gpsPermissionDenied } = useApp();
   const [heading, setHeading] = useState<number>(0);
+  const [continuousHeading, setContinuousHeading] = useState<number>(0);
   const [calibrating, setCalibrating] = useState<boolean>(false);
   const [needsIosPermission, setNeedsIosPermission] = useState<boolean>(false);
   const [compassActive, setCompassActive] = useState<boolean>(false);
+
+  const prevHeadingRef = useRef<number>(0);
+  const continuousHeadingRef = useRef<number>(0);
 
   const qiblaBearing = qiblaInfo.bearing;
   const cardinal = qiblaInfo.cardinal;
@@ -21,20 +25,35 @@ export default function QiblaPage() {
     lng >= 0 ? lng.toFixed(2) + "°E" : Math.abs(lng).toFixed(2) + "°W"
   }`;
 
-  const handleOrientation = useCallback((e: DeviceOrientationEvent) => {
-    const anyEvent = e as any;
-    if (anyEvent.webkitCompassHeading !== undefined) {
-      // iOS: webkitCompassHeading is already degrees clockwise from true North
-      setHeading(Math.round(anyEvent.webkitCompassHeading));
-    } else if (e.absolute && e.alpha !== null) {
-      // Android absolute: convert alpha to compass heading
-      setHeading(Math.round((360 - e.alpha) % 360));
-    } else if (!e.absolute && e.alpha !== null) {
-      // Fallback non-absolute
-      setHeading(Math.round((360 - e.alpha) % 360));
-    }
+  // Shortest-path angular smoothing so it never snaps/spins across the 0°/360° boundary
+  const applyHeading = useCallback((rawHeading: number) => {
+    const normalized = ((rawHeading % 360) + 360) % 360;
+
+    let delta = normalized - prevHeadingRef.current;
+    if (delta > 180) delta -= 360;
+    if (delta < -180) delta += 360;
+
+    continuousHeadingRef.current += delta;
+    prevHeadingRef.current = normalized;
+
+    setHeading(Math.round(normalized));
+    setContinuousHeading(continuousHeadingRef.current);
     setCompassActive(true);
   }, []);
+
+  const handleOrientation = useCallback((e: DeviceOrientationEvent) => {
+    const anyEvent = e as any;
+    if (anyEvent.webkitCompassHeading !== undefined && anyEvent.webkitCompassHeading !== null) {
+      // iOS: webkitCompassHeading is degrees clockwise from true North
+      applyHeading(anyEvent.webkitCompassHeading);
+    } else if (e.absolute && e.alpha !== null) {
+      // Android absolute orientation
+      applyHeading((360 - e.alpha) % 360);
+    } else if (e.alpha !== null) {
+      // Fallback
+      applyHeading((360 - e.alpha) % 360);
+    }
+  }, [applyHeading]);
 
   const startCompassListeners = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -42,7 +61,7 @@ export default function QiblaPage() {
     if ("ondeviceorientationabsolute" in window) {
       window.addEventListener("deviceorientationabsolute", handleOrientation as EventListener, true);
     }
-    // Also add standard deviceorientation as iOS fallback
+    // Standard deviceorientation for iOS and fallbacks
     window.addEventListener("deviceorientation", handleOrientation as EventListener, true);
   }, [handleOrientation]);
 
@@ -51,10 +70,10 @@ export default function QiblaPage() {
 
     const DevOrient = DeviceOrientationEvent as any;
     if (typeof DevOrient.requestPermission === "function") {
-      // iOS 13+ — must request permission via user gesture
+      // iOS 13+ requires user gesture permission
       setNeedsIosPermission(true);
     } else {
-      // Android / desktop — start immediately
+      // Android / desktop start directly
       startCompassListeners();
     }
 
@@ -85,9 +104,9 @@ export default function QiblaPage() {
     setTimeout(() => setCalibrating(false), 1500);
   };
 
-  // Compute rotation angle: difference between qibla bearing and device heading
+  // Compute rotation angle difference
   const diff = ((qiblaBearing - heading + 540) % 360) - 180;
-  const isAligned = Math.abs(diff) <= 4;
+  const isAligned = Math.abs(diff) <= 5;
   const turnDirection = diff > 0 ? `${Math.abs(Math.round(diff))}° right` : `${Math.abs(Math.round(diff))}° left`;
 
   return (
@@ -150,7 +169,7 @@ export default function QiblaPage() {
       {/* Main Compass Card */}
       <section className="p-6 rounded-3xl bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border shadow-qalb-card text-center space-y-4">
         {/* Status Pill */}
-        <div className={`inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-semibold ${
+        <div className={`inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-semibold transition-colors ${
           isAligned
             ? "bg-[#E3F2ED] text-[#1D7A5C]"
             : compassActive
@@ -167,28 +186,55 @@ export default function QiblaPage() {
           </span>
         </div>
 
-        {/* Circular Compass Dial */}
+        {/* Circular Compass Dial Container */}
         <div className="relative w-64 h-64 sm:w-72 sm:h-72 mx-auto my-2">
-          {/* Outer Ring with Cardinal Directions — rotates opposite to device heading */}
-          <div
-            className="absolute inset-0 rounded-full border-2 border-qalb-border dark:border-qalb-night-border bg-qalb-card-subtle/50 dark:bg-qalb-night-subtle/50 flex items-center justify-center transition-transform duration-300 ease-out"
-            style={{ transform: `rotate(${-heading}deg)` }}
-          >
-            {/* Cardinal Markers */}
-            <span className="absolute top-2 font-bold text-xs text-red-600 font-sans">N</span>
-            <span className="absolute bottom-2 font-bold text-xs text-qalb-muted font-sans">S</span>
-            <span className="absolute left-3 font-bold text-xs text-qalb-muted font-sans">W</span>
-            <span className="absolute right-3 font-bold text-xs text-qalb-muted font-sans">E</span>
+          {/* Fixed 12 o'clock Phone Heading Indicator at the top */}
+          <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-none">
+            <div
+              className={`w-1 h-3 rounded-full transition-colors duration-200 ${
+                isAligned ? "bg-emerald-500 shadow-sm shadow-emerald-400" : "bg-qalb-gold"
+              }`}
+            />
+            <div
+              className={`w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[5px] transition-colors duration-200 ${
+                isAligned ? "border-t-emerald-500" : "border-t-qalb-gold"
+              }`}
+            />
+          </div>
 
-            {/* Kaaba Marker Icon at Qibla Bearing (relative to dial which already accounts for heading) */}
+          {/* Outer Ring with Cardinal Directions — rotates smoothly by -continuousHeading */}
+          <div
+            className="absolute inset-0 rounded-full border-2 border-qalb-border dark:border-qalb-night-border bg-qalb-card-subtle/50 dark:bg-qalb-night-subtle/50 flex items-center justify-center transition-transform duration-200 ease-out"
+            style={{ transform: `rotate(${-continuousHeading}deg)` }}
+          >
+            {/* Cardinal Markers locked to the dial */}
+            <span className="absolute top-2.5 font-bold text-xs text-red-600 font-sans">N</span>
+            <span className="absolute bottom-2.5 font-bold text-xs text-qalb-muted font-sans">S</span>
+            <span className="absolute left-3.5 font-bold text-xs text-qalb-muted font-sans">W</span>
+            <span className="absolute right-3.5 font-bold text-xs text-qalb-muted font-sans">E</span>
+
+            {/* Kaaba Marker stationed inside the rotating dial at rotate(${qiblaBearing}deg) */}
             <div
               className="absolute inset-0 flex items-start justify-center pointer-events-none"
               style={{ transform: `rotate(${qiblaBearing}deg)` }}
             >
-              <div className="flex flex-col items-center mt-2">
-                <div className="w-8 h-8 rounded-full bg-qalb-gold text-white flex items-center justify-center shadow-md border-2 border-white">
-                  <span className="text-xs font-bold">🕋</span>
+              <div className="flex flex-col items-center mt-2.5">
+                {/* Kaaba Badge */}
+                <div
+                  className={`w-9 h-9 rounded-full flex items-center justify-center shadow-md border-2 transition-all duration-200 ${
+                    isAligned
+                      ? "bg-emerald-600 text-white border-white scale-110 shadow-emerald-300 dark:shadow-emerald-950"
+                      : "bg-qalb-gold text-white border-white"
+                  }`}
+                >
+                  <span className="text-sm">🕋</span>
                 </div>
+                {/* Pointer guide toward Kaaba */}
+                <div
+                  className={`w-0.5 h-16 transition-colors duration-200 ${
+                    isAligned ? "bg-emerald-500" : "bg-qalb-gold/60"
+                  }`}
+                />
               </div>
             </div>
 
@@ -196,21 +242,13 @@ export default function QiblaPage() {
             <div className="w-48 h-48 rounded-full border border-dashed border-qalb-border dark:border-qalb-night-border" />
           </div>
 
-          {/* Compass Needle pointing to Qibla — fixed in screen space, shows diff from heading */}
-          <div
-            className="absolute inset-0 flex items-center justify-center pointer-events-none transition-transform duration-300 ease-out"
-            style={{ transform: `rotate(${diff}deg)` }}
-          >
-            <div className="w-1.5 h-24 bg-qalb-green rounded-full shadow-sm" />
-          </div>
-
-          {/* Center Display: Heading */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          {/* Center Display: Live Heading Number */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
             <div className="w-20 h-20 rounded-full bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border shadow-md flex flex-col items-center justify-center">
               <span className="text-lg font-bold text-qalb-ink dark:text-qalb-night-ink tabular-nums">
                 {heading}°
               </span>
-              <span className="text-[9px] uppercase tracking-wider font-bold text-qalb-muted">
+              <span className="text-[9px] uppercase tracking-wider font-bold text-qalb-muted font-sans">
                 HEADING
               </span>
             </div>
@@ -219,7 +257,7 @@ export default function QiblaPage() {
 
         {/* Alignment Instruction Banner */}
         <div
-          className={`py-3 px-5 rounded-2xl text-xs font-bold text-white shadow-sm flex items-center justify-center gap-2 transition-colors ${
+          className={`py-3 px-5 rounded-2xl text-xs font-bold text-white shadow-sm flex items-center justify-center gap-2 transition-colors duration-200 ${
             isAligned ? "bg-emerald-600" : "bg-qalb-green"
           }`}
         >
@@ -253,13 +291,13 @@ export default function QiblaPage() {
         </div>
       </section>
 
-      {/* Manual Compass Adjust Slider Card (fallback / simulation) */}
+      {/* Manual Compass Adjust Slider Card (fallback / testing) */}
       <section className="p-4 sm:p-5 rounded-2xl bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border shadow-qalb-card space-y-3">
         <div className="flex items-center justify-between text-xs">
           <span className="font-bold text-qalb-ink dark:text-qalb-night-ink">
             Manual Adjust
           </span>
-          <span className="font-bold text-qalb-gold tabular-nums">{heading.toFixed(1)}°</span>
+          <span className="font-bold text-qalb-gold tabular-nums">{heading}°</span>
         </div>
 
         <input
@@ -267,20 +305,20 @@ export default function QiblaPage() {
           min="0"
           max="360"
           value={heading}
-          onChange={(e) => setHeading(Number(e.target.value))}
+          onChange={(e) => applyHeading(Number(e.target.value))}
           className="w-full h-1.5 bg-qalb-border dark:bg-qalb-night-border rounded-lg appearance-none cursor-pointer accent-qalb-green"
         />
 
         <div className="flex items-center justify-between text-xs pt-1">
           <button
-            onClick={() => setHeading((prev) => (prev - 5 + 360) % 360)}
+            onClick={() => applyHeading(heading - 5)}
             className="px-3 py-1.5 rounded-xl border border-qalb-border bg-qalb-card-subtle text-qalb-ink font-semibold"
           >
             - 5°
           </button>
-          <span className="text-[11px] text-qalb-muted">Drag to simulate compass</span>
+          <span className="text-[11px] text-qalb-muted font-sans">Drag to simulate compass</span>
           <button
-            onClick={() => setHeading((prev) => (prev + 5) % 360)}
+            onClick={() => applyHeading(heading + 5)}
             className="px-3 py-1.5 rounded-xl border border-qalb-border bg-qalb-card-subtle text-qalb-ink font-semibold"
           >
             + 5°
@@ -297,7 +335,7 @@ export default function QiblaPage() {
         <div className="space-y-2.5 text-xs text-qalb-muted font-sans">
           {[
             "Hold phone flat and away from metal objects or electronic devices.",
-            "Rotate slowly until the green needle points directly to the Kaaba icon.",
+            "Rotate slowly until the Kaaba icon aligns with the top indicator.",
             "Calibrate by moving phone in a figure-8 motion if accuracy seems offset.",
             "Use in an open area for highest magnetic compass accuracy.",
           ].map((tip, i) => (

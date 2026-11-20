@@ -7,25 +7,20 @@ import { useApp } from "@/context/AppContext";
 
 export function HijriQiblaBanner() {
   const { hijriDate, qiblaInfo } = useApp();
-  const [timeStr, setTimeStr] = useState<string>("");
+  const [formattedDate, setFormattedDate] = useState<string>("");
 
   useEffect(() => {
-    const updateTime = () => {
+    const updateDate = () => {
       const now = new Date();
-      const options: Intl.DateTimeFormatOptions = {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      };
-      const formatted = now.toLocaleDateString("en-GB", options).replace(",", " •");
-      setTimeStr(formatted);
+      const day = now.getDate();
+      const month = now.toLocaleDateString("en-US", { month: "long" });
+      const year = now.getFullYear();
+      const time = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
+      setFormattedDate(`${day} ${month} ${year} • ${time}`);
     };
 
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
+    updateDate();
+    const interval = setInterval(updateDate, 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -48,8 +43,8 @@ export function HijriQiblaBanner() {
           <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight leading-snug">
             {hijriDate.day} {hijriDate.month.en} {hijriDate.year}
           </h2>
-          <p className="text-xs text-white/70 font-sans">
-            {timeStr || `${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}`}
+          <p className="text-xs text-white/70 font-sans" suppressHydrationWarning>
+            {formattedDate}
           </p>
         </div>
 
