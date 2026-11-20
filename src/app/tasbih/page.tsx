@@ -403,27 +403,45 @@ export default function TasbihPage() {
           </span>
         </div>
 
-        <div className="flex items-end justify-between pt-4 pb-1 h-28 px-2">
+        <div className="flex items-end justify-between pt-4 pb-1 h-32 px-2">
           {weekData.map((item, idx) => (
-            <div key={idx} className="flex flex-col items-center gap-2 h-full justify-end">
+            <div key={idx} className="flex flex-col items-center gap-1.5 h-full justify-end">
+              {/* Vertical Bar Track */}
               <div
-                className="w-7 sm:w-8 h-20 rounded-full bg-qalb-card-subtle dark:bg-qalb-night-subtle relative flex items-end overflow-hidden p-0.5"
+                className={`w-7 sm:w-8 h-20 rounded-full relative flex items-end overflow-hidden p-0.5 transition-all ${
+                  item.active
+                    ? "bg-[#EAF7EE] dark:bg-emerald-950/40 border-2 border-qalb-green dark:border-qalb-gold shadow-xs"
+                    : "bg-qalb-card-subtle dark:bg-qalb-night-subtle border-2 border-transparent"
+                }`}
                 title={`${item.count} dhikr on ${item.dateKey}`}
               >
                 <div
                   className={`w-full rounded-full transition-all duration-500 ${
-                    item.active ? "bg-qalb-gold" : "bg-[#1D7A5C]"
+                    item.active ? "bg-qalb-green dark:bg-qalb-gold" : "bg-[#1D7A5C]"
                   }`}
                   style={{ height: item.height }}
                 />
               </div>
-              <span
-                className={`text-[10px] font-bold ${
-                  item.active ? "text-qalb-gold" : "text-qalb-muted"
-                }`}
-              >
-                {item.day}
-              </span>
+
+              {/* Day Letter Badge */}
+              {item.active ? (
+                <div className="w-6 h-6 rounded-full bg-qalb-green dark:bg-qalb-gold text-white dark:text-qalb-night-bg flex items-center justify-center text-[10px] font-bold shadow-xs">
+                  {item.day}
+                </div>
+              ) : (
+                <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-qalb-muted font-sans">
+                  {item.day}
+                </div>
+              )}
+
+              {/* Tiny gold dot indicator directly below active day badge */}
+              <div className="h-1.5 flex items-center justify-center">
+                {item.active ? (
+                  <span className="w-1.5 h-1.5 rounded-full bg-qalb-gold shadow-xs" />
+                ) : (
+                  <span className="w-1.5 h-1.5 rounded-full bg-transparent" />
+                )}
+              </div>
             </div>
           ))}
         </div>
