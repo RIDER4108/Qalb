@@ -26,6 +26,7 @@ export default function TasbihPage() {
     tasbihCount,
     tasbihCycles,
     tasbihTodayTotal,
+    tasbihHistory,
     incrementTasbih,
     resetTasbih,
     resetTasbihCount,
@@ -78,26 +79,59 @@ export default function TasbihPage() {
   const remainingInCycle = target - tasbihCount;
   const percentInCycle = Math.min(100, Math.round((tasbihCount / target) * 100));
 
-  // Dynamic day highlight for the weekly bar chart (Mon=0..Sun=6)
-  const [activeDayIdx, setActiveDayIdx] = useState<number>(() => {
-    const d = new Date().getDay();
-    return d === 0 ? 6 : d - 1;
-  });
+  interface DayBarItem {
+    day: string;
+    dateKey: string;
+    count: number;
+    height: string;
+    active: boolean;
+  }
 
+  const [weekData, setWeekData] = useState<DayBarItem[]>([]);
+  const [weekTotalCount, setWeekTotalCount] = useState<number>(0);
+
+  // Compute real daily totals from localStorage keyed by YYYY-MM-DD
   useEffect(() => {
-    const d = new Date().getDay();
-    setActiveDayIdx(d === 0 ? 6 : d - 1);
-  }, []);
+    const now = new Date();
+    const currentDay = now.getDay(); // 0 is Sunday, 1 is Monday ... 6 is Saturday
+    const distanceToMonday = currentDay === 0 ? 6 : currentDay - 1; // 0 for Mon, 4 for Fri, etc.
 
-  const weekData = [
-    { day: "M", height: "45%", active: activeDayIdx === 0 },
-    { day: "T", height: "60%", active: activeDayIdx === 1 },
-    { day: "W", height: "40%", active: activeDayIdx === 2 },
-    { day: "T", height: "70%", active: activeDayIdx === 3 },
-    { day: "F", height: "85%", active: activeDayIdx === 4 },
-    { day: "S", height: "30%", active: activeDayIdx === 5 },
-    { day: "S", height: "20%", active: activeDayIdx === 6 },
-  ];
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - distanceToMonday);
+
+    const dayLetters = ["M", "T", "W", "T", "F", "S", "S"];
+    const rawDays = dayLetters.map((letter, idx) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + idx);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      const dateKey = `${yyyy}-${mm}-${dd}`;
+      const isToday = idx === distanceToMonday;
+      const isFuture = idx > distanceToMonday;
+      // Real count from localStorage (fallback to tasbihTodayTotal for today)
+      const count = isFuture ? 0 : (tasbihHistory[dateKey] ?? (isToday ? tasbihTodayTotal : 0));
+      return {
+        day: letter,
+        dateKey,
+        count,
+        active: isToday,
+      };
+    });
+
+    const total = rawDays.reduce((acc, d) => acc + d.count, 0);
+    setWeekTotalCount(total);
+
+    // Benchmark scaling: proportional to maxCount (minimum benchmark 100)
+    const maxCount = Math.max(100, ...rawDays.map((d) => d.count));
+
+    const bars: DayBarItem[] = rawDays.map((d) => ({
+      ...d,
+      height: d.count > 0 ? `${Math.min(100, Math.max(12, Math.round((d.count / maxCount) * 100)))}%` : "0%",
+    }));
+
+    setWeekData(bars);
+  }, [tasbihHistory, tasbihTodayTotal]);
 
   return (
     <main className="space-y-4">
@@ -343,16 +377,16 @@ export default function TasbihPage() {
         </div>
 
         <div className="p-4 rounded-2xl bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border shadow-qalb-card space-y-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-qalb-muted">
-            WEEKLY GOAL
+          <span className="text-[10px] font-bold uppercase tracking-wider text-qalb-muted font-sans">
+            WEEKLY PROGRESS
           </span>
           <div className="text-xl font-bold text-qalb-ink dark:text-qalb-night-ink tabular-nums">
-            5,000
+            {weekTotalCount.toLocaleString()} / 5,000
           </div>
           <div className="w-full h-1.5 rounded-full bg-qalb-card-subtle dark:bg-qalb-night-subtle overflow-hidden">
             <div
               className="h-full bg-qalb-gold rounded-full transition-all duration-300"
-              style={{ width: `${Math.min(100, (tasbihTodayTotal / 5000) * 100)}%` }}
+              style={{ width: `${Math.min(100, (weekTotalCount / 5000) * 100)}%` }}
             />
           </div>
         </div>
@@ -364,15 +398,18 @@ export default function TasbihPage() {
           <h3 className="text-xs font-bold text-qalb-ink dark:text-qalb-night-ink">
             This Week
           </h3>
-          <span className="text-[10px] text-qalb-muted">
-            Daily consistency
+          <span className="text-[10px] text-qalb-muted font-sans">
+            {weekTotalCount.toLocaleString()} total • Daily consistency
           </span>
         </div>
 
         <div className="flex items-end justify-between pt-4 pb-1 h-28 px-2">
           {weekData.map((item, idx) => (
             <div key={idx} className="flex flex-col items-center gap-2 h-full justify-end">
-              <div className="w-7 sm:w-8 h-20 rounded-full bg-qalb-card-subtle dark:bg-qalb-night-subtle relative flex items-end overflow-hidden p-0.5">
+              <div
+                className="w-7 sm:w-8 h-20 rounded-full bg-qalb-card-subtle dark:bg-qalb-night-subtle relative flex items-end overflow-hidden p-0.5"
+                title={`${item.count} dhikr on ${item.dateKey}`}
+              >
                 <div
                   className={`w-full rounded-full transition-all duration-500 ${
                     item.active ? "bg-qalb-gold" : "bg-[#1D7A5C]"

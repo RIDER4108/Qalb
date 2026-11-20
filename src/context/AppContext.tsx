@@ -13,6 +13,9 @@ export interface HabitStatus {
 }
 
 export interface AppContextType {
+  // Today Date Key (YYYY-MM-DD)
+  todayKey: string;
+
   // Location & Timings
   currentLocation: LocationConfig;
   setLocation: (loc: LocationConfig) => void;
@@ -40,6 +43,7 @@ export interface AppContextType {
   tasbihCount: number;
   tasbihCycles: number;
   tasbihTodayTotal: number;
+  tasbihHistory: Record<string, number>;
   incrementTasbih: (target: number) => void;
   resetTasbih: () => void;
   resetTasbihCount: () => void;
@@ -76,6 +80,7 @@ export function getTodayKey(): string {
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
+  const [todayKey, setTodayKey] = useState<string>(() => getTodayKey());
   const [currentLocation, setCurrentLocation] = useState<LocationConfig>(DEFAULT_LOCATIONS[0]);
   const [prayerTimings, setPrayerTimings] = useState<PrayerTimings | null>(null);
   const [hijriDate, setHijriDate] = useState<HijriDate | null>(null);
@@ -97,10 +102,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Habits history: { [dateKey]: { sunnah: boolean; quran: boolean; adhkar: boolean } }
   const [habitHistory, setHabitHistory] = useState<Record<string, HabitStatus>>({});
 
-  // Tasbih
+  // Tasbih state & history
   const [tasbihCount, setTasbihCount] = useState<number>(0);
   const [tasbihCycles, setTasbihCycles] = useState<number>(0);
   const [tasbihTodayTotal, setTasbihTodayTotal] = useState<number>(0);
+  const [tasbihHistory, setTasbihHistory] = useState<Record<string, number>>({});
 
   // Adhkar
   const [adhkarCounts, setAdhkarCounts] = useState<Record<string, number>>({});
@@ -114,8 +120,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     Isha: true,
   });
 
-  // Load state on mount
+  // Load state on mount with automatic daily rollover check
   useEffect(() => {
+    const today = getTodayKey();
+    setTodayKey(today);
+
     // Location
     const savedLoc = localStorage.getItem("qalb-location");
     if (savedLoc) {
@@ -141,23 +150,65 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } catch (e) {}
     }
 
-    // Tasbih
-    const savedTasbih = localStorage.getItem("qalb-tasbih");
-    if (savedTasbih) {
+    // Tasbih History
+    let loadedHistory: Record<string, number> = {};
+    const savedTasbihHistory = localStorage.getItem("qalb-tasbih-history");
+    if (savedTasbihHistory) {
       try {
-        const parsed = JSON.parse(savedTasbih);
-        setTasbihCount(parsed.count ?? 0);
-        setTasbihCycles(parsed.cycles ?? 0);
-        setTasbihTodayTotal(parsed.todayTotal ?? 0);
+        loadedHistory = JSON.parse(savedTasbihHistory);
+        setTasbihHistory(loadedHistory);
       } catch (e) {}
     }
 
-    // Adhkar
-    const savedAdhkar = localStorage.getItem("qalb-adhkar");
-    if (savedAdhkar) {
-      try {
-        setAdhkarCounts(JSON.parse(savedAdhkar));
-      } catch (e) {}
+    // Check if the saved date matches today's local date (YYYY-MM-DD)
+    const savedDate = localStorage.getItem("qalb-active-date");
+    if (savedDate && savedDate !== today) {
+      // Day has changed/rolled over: automatically clear stale daily state
+      let lifetimeCycles = 0;
+      const savedTasbih = localStorage.getItem("qalb-tasbih");
+      if (savedTasbih) {
+        try {
+          const parsed = JSON.parse(savedTasbih);
+          lifetimeCycles = parsed.cycles ?? 0;
+        } catch (e) {}
+      }
+
+      const todayTotal = loadedHistory[today] || 0;
+      setTasbihCount(0);
+      setTasbihCycles(lifetimeCycles);
+      setTasbihTodayTotal(todayTotal);
+      localStorage.setItem(
+        "qalb-tasbih",
+        JSON.stringify({ count: 0, cycles: lifetimeCycles, todayTotal })
+      );
+
+      // Clear today's adhkar counts
+      setAdhkarCounts({});
+      localStorage.removeItem("qalb-adhkar");
+
+      // Update active date to today
+      localStorage.setItem("qalb-active-date", today);
+    } else {
+      // Same day or first launch: normal hydration
+      localStorage.setItem("qalb-active-date", today);
+
+      const savedTasbih = localStorage.getItem("qalb-tasbih");
+      if (savedTasbih) {
+        try {
+          const parsed = JSON.parse(savedTasbih);
+          setTasbihCount(parsed.count ?? 0);
+          setTasbihCycles(parsed.cycles ?? 0);
+          const todayTotal = loadedHistory[today] ?? (parsed.todayTotal ?? 0);
+          setTasbihTodayTotal(todayTotal);
+        } catch (e) {}
+      }
+
+      const savedAdhkar = localStorage.getItem("qalb-adhkar");
+      if (savedAdhkar) {
+        try {
+          setAdhkarCounts(JSON.parse(savedAdhkar));
+        } catch (e) {}
+      }
     }
 
     // Reminders
@@ -213,7 +264,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     fetchTimings(currentLocation);
   }, [currentLocation, fetchTimings]);
 
-  // Periodic ticker for next prayer + midnight re-fetch
+  // Periodic ticker for next prayer + midnight re-fetch and daily rollover
   useEffect(() => {
     if (!prayerTimings) return;
     let lastKey = getTodayKey();
@@ -225,6 +276,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const currentKey = getTodayKey();
       if (currentKey !== lastKey) {
         lastKey = currentKey;
+        setTodayKey(currentKey);
+        setTasbihCount(0);
+        setTasbihTodayTotal(0);
+        setAdhkarCounts({});
+        localStorage.setItem("qalb-active-date", currentKey);
         fetchTimings(currentLocation);
       }
     }, 1000);
@@ -331,8 +387,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Tasbih actions
   const incrementTasbih = (target: number) => {
+    const today = getTodayKey();
     const nextCount = tasbihCount + 1;
-    const nextTotal = tasbihTodayTotal + 1;
+    const nextTotal = (tasbihHistory[today] || tasbihTodayTotal || 0) + 1;
+
+    setTasbihHistory((prev) => {
+      const updated = { ...prev, [today]: nextTotal };
+      localStorage.setItem("qalb-tasbih-history", JSON.stringify(updated));
+      return updated;
+    });
 
     if (nextCount >= target) {
       setTasbihCount(0);
@@ -377,6 +440,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const resetTasbihTotal = () => {
+    const today = getTodayKey();
+    setTasbihHistory((prev) => {
+      const updated = { ...prev, [today]: 0 };
+      localStorage.setItem("qalb-tasbih-history", JSON.stringify(updated));
+      return updated;
+    });
     setTasbihTodayTotal(0);
     localStorage.setItem(
       "qalb-tasbih",
@@ -450,6 +519,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   return (
     <AppContext.Provider
       value={{
+        todayKey,
         currentLocation,
         setLocation,
         prayerTimings,
@@ -470,6 +540,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         tasbihCount,
         tasbihCycles,
         tasbihTodayTotal,
+        tasbihHistory,
         incrementTasbih,
         resetTasbih,
         resetTasbihCount,
