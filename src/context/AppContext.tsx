@@ -12,6 +12,11 @@ export interface HabitStatus {
   adhkar: boolean;
 }
 
+export interface TasbihProgressItem {
+  count: number;
+  cycles: number;
+}
+
 export interface AppContextType {
   // Today Date Key (YYYY-MM-DD)
   todayKey: string;
@@ -44,11 +49,15 @@ export interface AppContextType {
   tasbihCycles: number;
   tasbihTodayTotal: number;
   tasbihHistory: Record<string, number>;
-  incrementTasbih: (target: number) => void;
-  resetTasbih: () => void;
-  resetTasbihCount: () => void;
-  resetTasbihCycles: () => void;
+  tasbihProgress: Record<string, TasbihProgressItem>;
+  activeTasbihId: string;
+  setActiveTasbihId: (id: string) => void;
+  incrementTasbih: (target: number, tasbihId?: string) => void;
+  resetTasbih: (tasbihId?: string) => void;
+  resetTasbihCount: (tasbihId?: string) => void;
+  resetTasbihCycles: (tasbihId?: string) => void;
   resetTasbihTotal: () => void;
+  deleteTasbihProgress: (tasbihId: string) => void;
 
   // GPS
   gpsPermissionDenied: boolean;
@@ -103,10 +112,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [habitHistory, setHabitHistory] = useState<Record<string, HabitStatus>>({});
 
   // Tasbih state & history
-  const [tasbihCount, setTasbihCount] = useState<number>(0);
-  const [tasbihCycles, setTasbihCycles] = useState<number>(0);
+  const [activeTasbihId, setActiveTasbihId] = useState<string>("subhanallah");
+  const [tasbihProgress, setTasbihProgress] = useState<Record<string, TasbihProgressItem>>({});
   const [tasbihTodayTotal, setTasbihTodayTotal] = useState<number>(0);
   const [tasbihHistory, setTasbihHistory] = useState<Record<string, number>>({});
+
+  const currentActiveProgress = tasbihProgress[activeTasbihId] || { count: 0, cycles: 0 };
+  const tasbihCount = currentActiveProgress.count;
+  const tasbihCycles = currentActiveProgress.cycles;
 
   // Adhkar
   const [adhkarCounts, setAdhkarCounts] = useState<Record<string, number>>({});
@@ -160,27 +173,60 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } catch (e) {}
     }
 
+    // Per-Tasbih Progress Items
+    let loadedItems: Record<string, TasbihProgressItem> = {};
+    const savedProgress = localStorage.getItem("qalb-tasbih-progress");
+    if (savedProgress) {
+      try {
+        loadedItems = JSON.parse(savedProgress) || {};
+      } catch (e) {}
+    }
+
+    const savedTasbih = localStorage.getItem("qalb-tasbih");
+    let savedActiveId = "subhanallah";
+    let savedTodayTotal = 0;
+
+    if (savedTasbih) {
+      try {
+        const parsed = JSON.parse(savedTasbih);
+        if (parsed.items && typeof parsed.items === "object") {
+          loadedItems = { ...parsed.items, ...loadedItems };
+        } else if (parsed.count != null || parsed.cycles != null) {
+          // Migration from legacy single count
+          if (!loadedItems["subhanallah"]) {
+            loadedItems["subhanallah"] = {
+              count: parsed.count ?? 0,
+              cycles: parsed.cycles ?? 0,
+            };
+          }
+        }
+        if (parsed.activeId) {
+          savedActiveId = parsed.activeId;
+        }
+        savedTodayTotal = parsed.todayTotal ?? 0;
+      } catch (e) {}
+    }
+
+    setTasbihProgress(loadedItems);
+    setActiveTasbihId(savedActiveId);
+
     // Check if the saved date matches today's local date (YYYY-MM-DD)
     const savedDate = localStorage.getItem("qalb-active-date");
     if (savedDate && savedDate !== today) {
       // Day has changed/rolled over: automatically clear stale daily state
-      let lifetimeCycles = 0;
-      const savedTasbih = localStorage.getItem("qalb-tasbih");
-      if (savedTasbih) {
-        try {
-          const parsed = JSON.parse(savedTasbih);
-          lifetimeCycles = parsed.cycles ?? 0;
-        } catch (e) {}
-      }
-
       const todayTotal = loadedHistory[today] || 0;
-      setTasbihCount(0);
-      setTasbihCycles(lifetimeCycles);
       setTasbihTodayTotal(todayTotal);
       localStorage.setItem(
         "qalb-tasbih",
-        JSON.stringify({ count: 0, cycles: lifetimeCycles, todayTotal })
+        JSON.stringify({
+          activeId: savedActiveId,
+          todayTotal,
+          items: loadedItems,
+          count: loadedItems[savedActiveId]?.count ?? 0,
+          cycles: loadedItems[savedActiveId]?.cycles ?? 0,
+        })
       );
+      localStorage.setItem("qalb-tasbih-progress", JSON.stringify(loadedItems));
 
       // Clear today's adhkar counts
       setAdhkarCounts({});
@@ -192,16 +238,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Same day or first launch: normal hydration
       localStorage.setItem("qalb-active-date", today);
 
-      const savedTasbih = localStorage.getItem("qalb-tasbih");
-      if (savedTasbih) {
-        try {
-          const parsed = JSON.parse(savedTasbih);
-          setTasbihCount(parsed.count ?? 0);
-          setTasbihCycles(parsed.cycles ?? 0);
-          const todayTotal = loadedHistory[today] ?? (parsed.todayTotal ?? 0);
-          setTasbihTodayTotal(todayTotal);
-        } catch (e) {}
-      }
+      const todayTotal = loadedHistory[today] ?? savedTodayTotal;
+      setTasbihTodayTotal(todayTotal);
+      localStorage.setItem("qalb-tasbih-progress", JSON.stringify(loadedItems));
 
       const savedAdhkar = localStorage.getItem("qalb-adhkar");
       if (savedAdhkar) {
@@ -277,7 +316,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (currentKey !== lastKey) {
         lastKey = currentKey;
         setTodayKey(currentKey);
-        setTasbihCount(0);
         setTasbihTodayTotal(0);
         setAdhkarCounts({});
         localStorage.setItem("qalb-active-date", currentKey);
@@ -385,9 +423,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Tasbih actions
-  const incrementTasbih = (target: number) => {
+  const incrementTasbih = (target: number, tasbihId?: string) => {
+    const id = typeof tasbihId === "string" && tasbihId ? tasbihId : activeTasbihId || "subhanallah";
     const today = getTodayKey();
-    const nextCount = tasbihCount + 1;
     const nextTotal = (tasbihHistory[today] || tasbihTodayTotal || 0) + 1;
 
     setTasbihHistory((prev) => {
@@ -395,47 +433,79 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("qalb-tasbih-history", JSON.stringify(updated));
       return updated;
     });
+    setTasbihTodayTotal(nextTotal);
 
-    if (nextCount >= target) {
-      setTasbihCount(0);
-      setTasbihCycles((prev) => prev + 1);
-      setTasbihTodayTotal(nextTotal);
-      localStorage.setItem(
-        "qalb-tasbih",
-        JSON.stringify({ count: 0, cycles: tasbihCycles + 1, todayTotal: nextTotal })
-      );
-    } else {
-      setTasbihCount(nextCount);
-      setTasbihTodayTotal(nextTotal);
-      localStorage.setItem(
-        "qalb-tasbih",
-        JSON.stringify({ count: nextCount, cycles: tasbihCycles, todayTotal: nextTotal })
-      );
-    }
+    setTasbihProgress((prev) => {
+      const current = prev[id] || { count: 0, cycles: 0 };
+      const nextCount = current.count + 1;
+      let updatedItem: TasbihProgressItem;
+
+      if (nextCount >= target) {
+        updatedItem = { count: 0, cycles: current.cycles + 1 };
+      } else {
+        updatedItem = { count: nextCount, cycles: current.cycles };
+      }
+
+      const updatedMap = { ...prev, [id]: updatedItem };
+      try {
+        const payload = {
+          activeId: id,
+          todayTotal: nextTotal,
+          items: updatedMap,
+          count: updatedItem.count,
+          cycles: updatedItem.cycles,
+        };
+        localStorage.setItem("qalb-tasbih", JSON.stringify(payload));
+        localStorage.setItem("qalb-tasbih-progress", JSON.stringify(updatedMap));
+      } catch (e) {}
+      return updatedMap;
+    });
   };
 
-  const resetTasbih = () => {
-    setTasbihCount(0);
-    localStorage.setItem(
-      "qalb-tasbih",
-      JSON.stringify({ count: 0, cycles: tasbihCycles, todayTotal: tasbihTodayTotal })
-    );
+  const resetTasbih = (tasbihId?: string) => {
+    resetTasbihCount(tasbihId);
   };
 
-  const resetTasbihCount = () => {
-    setTasbihCount(0);
-    localStorage.setItem(
-      "qalb-tasbih",
-      JSON.stringify({ count: 0, cycles: tasbihCycles, todayTotal: tasbihTodayTotal })
-    );
+  const resetTasbihCount = (tasbihId?: string) => {
+    const id = typeof tasbihId === "string" && tasbihId ? tasbihId : activeTasbihId || "subhanallah";
+    setTasbihProgress((prev) => {
+      const current = prev[id] || { count: 0, cycles: 0 };
+      const updatedItem = { count: 0, cycles: current.cycles };
+      const updatedMap = { ...prev, [id]: updatedItem };
+      try {
+        const payload = {
+          activeId: id,
+          todayTotal: tasbihTodayTotal,
+          items: updatedMap,
+          count: 0,
+          cycles: current.cycles,
+        };
+        localStorage.setItem("qalb-tasbih", JSON.stringify(payload));
+        localStorage.setItem("qalb-tasbih-progress", JSON.stringify(updatedMap));
+      } catch (e) {}
+      return updatedMap;
+    });
   };
 
-  const resetTasbihCycles = () => {
-    setTasbihCycles(0);
-    localStorage.setItem(
-      "qalb-tasbih",
-      JSON.stringify({ count: tasbihCount, cycles: 0, todayTotal: tasbihTodayTotal })
-    );
+  const resetTasbihCycles = (tasbihId?: string) => {
+    const id = typeof tasbihId === "string" && tasbihId ? tasbihId : activeTasbihId || "subhanallah";
+    setTasbihProgress((prev) => {
+      const current = prev[id] || { count: 0, cycles: 0 };
+      const updatedItem = { count: current.count, cycles: 0 };
+      const updatedMap = { ...prev, [id]: updatedItem };
+      try {
+        const payload = {
+          activeId: id,
+          todayTotal: tasbihTodayTotal,
+          items: updatedMap,
+          count: current.count,
+          cycles: 0,
+        };
+        localStorage.setItem("qalb-tasbih", JSON.stringify(payload));
+        localStorage.setItem("qalb-tasbih-progress", JSON.stringify(updatedMap));
+      } catch (e) {}
+      return updatedMap;
+    });
   };
 
   const resetTasbihTotal = () => {
@@ -446,10 +516,37 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return updated;
     });
     setTasbihTodayTotal(0);
-    localStorage.setItem(
-      "qalb-tasbih",
-      JSON.stringify({ count: tasbihCount, cycles: tasbihCycles, todayTotal: 0 })
-    );
+    try {
+      const current = tasbihProgress[activeTasbihId] || { count: 0, cycles: 0 };
+      const payload = {
+        activeId: activeTasbihId,
+        todayTotal: 0,
+        items: tasbihProgress,
+        count: current.count,
+        cycles: current.cycles,
+      };
+      localStorage.setItem("qalb-tasbih", JSON.stringify(payload));
+    } catch (e) {}
+  };
+
+  const deleteTasbihProgress = (tasbihId: string) => {
+    setTasbihProgress((prev) => {
+      const updated = { ...prev };
+      delete updated[tasbihId];
+      try {
+        localStorage.setItem("qalb-tasbih-progress", JSON.stringify(updated));
+        const current = updated[activeTasbihId] || { count: 0, cycles: 0 };
+        const payload = {
+          activeId: activeTasbihId,
+          todayTotal: tasbihTodayTotal,
+          items: updated,
+          count: current.count,
+          cycles: current.cycles,
+        };
+        localStorage.setItem("qalb-tasbih", JSON.stringify(payload));
+      } catch (e) {}
+      return updated;
+    });
   };
 
   // Adhkar actions
@@ -540,11 +637,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         tasbihCycles,
         tasbihTodayTotal,
         tasbihHistory,
+        tasbihProgress,
+        activeTasbihId,
+        setActiveTasbihId,
         incrementTasbih,
         resetTasbih,
         resetTasbihCount,
         resetTasbihCycles,
         resetTasbihTotal,
+        deleteTasbihProgress,
         gpsPermissionDenied,
         requestGpsLocation,
         adhkarCounts,

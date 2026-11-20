@@ -1,18 +1,30 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Smartphone, Plus, RotateCcw, Volume2, VolumeX, AlertTriangle } from "lucide-react";
+import {
+  Smartphone,
+  Plus,
+  RotateCcw,
+  Volume2,
+  VolumeX,
+  AlertTriangle,
+  MoreVertical,
+  Edit2,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useApp } from "@/context/AppContext";
 
-interface DhikrPreset {
+export interface DhikrPreset {
   id: string;
   arabic: string;
   name: string;
   meaning: string;
   target: number;
+  isCustom?: boolean;
 }
 
-const PRESETS: DhikrPreset[] = [
+export const DEFAULT_PRESETS: DhikrPreset[] = [
   { id: "subhanallah", arabic: "سُبْحَانَ ٱللَّٰهِ", name: "SubhanAllah", meaning: "Glory be to Allah", target: 33 },
   { id: "alhamdulillah", arabic: "ٱلْحَمْدُ لِلَّٰهِ", name: "Alhamdulillah", meaning: "Praise be to Allah", target: 33 },
   { id: "allahuakbar", arabic: "ٱللَّٰهُ أَكْبَرُ", name: "Allahu Akbar", meaning: "Allah is the Greatest", target: 34 },
@@ -23,28 +35,194 @@ const PRESETS: DhikrPreset[] = [
 
 export default function TasbihPage() {
   const {
-    tasbihCount,
-    tasbihCycles,
     tasbihTodayTotal,
     tasbihHistory,
+    tasbihProgress,
+    activeTasbihId,
+    setActiveTasbihId,
     incrementTasbih,
-    resetTasbih,
     resetTasbihCount,
     resetTasbihCycles,
     resetTasbihTotal,
+    deleteTasbihProgress,
   } = useApp();
 
-  const [selectedPreset, setSelectedPreset] = useState<DhikrPreset>(PRESETS[0]);
+  const [presets, setPresets] = useState<DhikrPreset[]>(DEFAULT_PRESETS);
+  const [selectedPreset, setSelectedPreset] = useState<DhikrPreset>(DEFAULT_PRESETS[0]);
   const [hapticEnabled, setHapticEnabled] = useState<boolean>(true);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(false);
-  const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const [isPressing, setIsPressing] = useState<boolean>(false);
   const [confirmResetTotal, setConfirmResetTotal] = useState<boolean>(false);
 
-  // Custom preset form
-  const [newArabic, setNewArabic] = useState("");
-  const [newName, setNewName] = useState("");
-  const [newTarget, setNewTarget] = useState("33");
+  // Dropdown menu state
+  const [menuAnchor, setMenuAnchor] = useState<{ id: string; top: number; left: number } | null>(null);
+
+  // Add / Edit Modal state
+  const [showModal, setShowModal] = useState<boolean>(false);
+  const [modalMode, setModalMode] = useState<"add" | "edit">("add");
+  const [editingPresetId, setEditingPresetId] = useState<string | null>(null);
+
+  // Custom preset form fields
+  const [formArabic, setFormArabic] = useState("");
+  const [formName, setFormName] = useState("");
+  const [formMeaning, setFormMeaning] = useState("");
+  const [formTarget, setFormTarget] = useState("33");
+
+  // Hydrate custom presets & selected preset on mount
+  useEffect(() => {
+    const savedList = localStorage.getItem("qalb-tasbih-list");
+    const savedCustoms = localStorage.getItem("qalb-custom-tasbihs");
+    let loadedPresets: DhikrPreset[] = DEFAULT_PRESETS;
+
+    if (savedList) {
+      try {
+        const parsed = JSON.parse(savedList);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          loadedPresets = parsed;
+        }
+      } catch (e) {}
+    } else if (savedCustoms) {
+      try {
+        const parsedCustoms = JSON.parse(savedCustoms);
+        if (Array.isArray(parsedCustoms) && parsedCustoms.length > 0) {
+          loadedPresets = [...DEFAULT_PRESETS, ...parsedCustoms];
+        }
+      } catch (e) {}
+    }
+
+    setPresets(loadedPresets);
+
+    const savedSelectedId = localStorage.getItem("qalb-selected-tasbih-id");
+    let initialSelected = loadedPresets[0];
+    if (savedSelectedId) {
+      const match = loadedPresets.find((p) => p.id === savedSelectedId);
+      if (match) initialSelected = match;
+    }
+
+    setSelectedPreset(initialSelected);
+    setActiveTasbihId(initialSelected.id);
+  }, [setActiveTasbihId]);
+
+  // Close dropdown on scroll
+  useEffect(() => {
+    if (!menuAnchor) return;
+    const handleScroll = () => setMenuAnchor(null);
+    window.addEventListener("scroll", handleScroll, true);
+    return () => window.removeEventListener("scroll", handleScroll, true);
+  }, [menuAnchor]);
+
+  // Persist presets helper
+  const persistPresets = (updatedList: DhikrPreset[]) => {
+    setPresets(updatedList);
+    try {
+      localStorage.setItem("qalb-tasbih-list", JSON.stringify(updatedList));
+      const customOnly = updatedList.filter(
+        (p) => p.isCustom || p.id.startsWith("custom-")
+      );
+      localStorage.setItem("qalb-custom-tasbihs", JSON.stringify(customOnly));
+    } catch (e) {}
+  };
+
+  const handleSelectPreset = (preset: DhikrPreset) => {
+    setSelectedPreset(preset);
+    setActiveTasbihId(preset.id);
+    try {
+      localStorage.setItem("qalb-selected-tasbih-id", preset.id);
+    } catch (e) {}
+  };
+
+  const handleOpenAddModal = () => {
+    setModalMode("add");
+    setEditingPresetId(null);
+    setFormArabic("");
+    setFormName("");
+    setFormMeaning("");
+    setFormTarget("33");
+    setMenuAnchor(null);
+    setShowModal(true);
+  };
+
+  const handleOpenEditModal = (preset: DhikrPreset) => {
+    setModalMode("edit");
+    setEditingPresetId(preset.id);
+    setFormArabic(preset.arabic || "");
+    setFormName(preset.name || "");
+    setFormMeaning(preset.meaning || "");
+    setFormTarget(String(preset.target || 33));
+    setMenuAnchor(null);
+    setShowModal(true);
+  };
+
+  const handleDeletePreset = (presetId: string) => {
+    setMenuAnchor(null);
+    if (presets.length <= 1) {
+      return; // Prevent deleting the very last remaining Tasbih
+    }
+
+    const updatedList = presets.filter((p) => p.id !== presetId);
+    persistPresets(updatedList);
+    deleteTasbihProgress(presetId);
+
+    // If the deleted Tasbih was currently selected, automatically switch selection to first remaining
+    if (selectedPreset.id === presetId) {
+      const nextSelected = updatedList[0];
+      setSelectedPreset(nextSelected);
+      setActiveTasbihId(nextSelected.id);
+      try {
+        localStorage.setItem("qalb-selected-tasbih-id", nextSelected.id);
+      } catch (e) {}
+    }
+  };
+
+  const handleSubmitModal = () => {
+    const trimmedName = formName.trim();
+    if (!trimmedName) return;
+
+    const targetNum = Math.max(1, parseInt(formTarget, 10) || 33);
+    const arabicText = formArabic.trim() || trimmedName;
+
+    if (modalMode === "edit" && editingPresetId) {
+      const updatedList = presets.map((p) => {
+        if (p.id === editingPresetId) {
+          return {
+            ...p,
+            name: trimmedName,
+            arabic: arabicText,
+            target: targetNum,
+          };
+        }
+        return p;
+      });
+      persistPresets(updatedList);
+
+      if (selectedPreset.id === editingPresetId) {
+        const updatedSelected = updatedList.find((p) => p.id === editingPresetId);
+        if (updatedSelected) {
+          setSelectedPreset(updatedSelected);
+        }
+      }
+      setShowModal(false);
+    } else {
+      const newPreset: DhikrPreset = {
+        id: `custom-${Date.now()}`,
+        name: trimmedName,
+        arabic: arabicText,
+        meaning: formMeaning.trim() || "Custom Dhikr",
+        target: targetNum,
+        isCustom: true,
+      };
+      const updatedList = [...presets, newPreset];
+      persistPresets(updatedList);
+
+      setSelectedPreset(newPreset);
+      setActiveTasbihId(newPreset.id);
+      try {
+        localStorage.setItem("qalb-selected-tasbih-id", newPreset.id);
+      } catch (e) {}
+
+      setShowModal(false);
+    }
+  };
 
   const playClickSound = () => {
     if (!soundEnabled) return;
@@ -72,12 +250,14 @@ export default function TasbihPage() {
       navigator.vibrate(25);
     }
 
-    incrementTasbih(selectedPreset.target);
+    incrementTasbih(selectedPreset.target, selectedPreset.id);
   };
 
+  const currentCount = tasbihProgress[selectedPreset.id]?.count ?? 0;
+  const currentCycles = tasbihProgress[selectedPreset.id]?.cycles ?? 0;
   const target = selectedPreset.target;
-  const remainingInCycle = target - tasbihCount;
-  const percentInCycle = Math.min(100, Math.round((tasbihCount / target) * 100));
+  const remainingInCycle = Math.max(0, target - currentCount);
+  const percentInCycle = Math.min(100, Math.round((currentCount / target) * 100));
 
   interface DayBarItem {
     day: string;
@@ -160,7 +340,7 @@ export default function TasbihPage() {
           </button>
 
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={handleOpenAddModal}
             className="flex items-center justify-center w-9 h-9 rounded-full bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border text-qalb-ink dark:text-qalb-night-ink shadow-sm hover:border-qalb-gold"
             title="Add Custom Preset"
           >
@@ -171,38 +351,65 @@ export default function TasbihPage() {
 
       {/* Preset Pills Carousel */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
-        {PRESETS.map((preset) => {
+        {presets.map((preset) => {
           const isSelected = selectedPreset.id === preset.id;
           return (
-            <button
-              key={preset.id}
-              onClick={() => {
-                setSelectedPreset(preset);
-                resetTasbih();
-              }}
-              className={`flex flex-col items-center justify-center px-4 py-2 rounded-2xl border transition-all shrink-0 min-w-[120px] text-center ${
-                isSelected
-                  ? "bg-qalb-green text-white border-qalb-green shadow-sm"
-                  : "bg-qalb-card dark:bg-qalb-night-card border-qalb-border dark:border-qalb-night-border text-qalb-ink dark:text-qalb-night-ink hover:border-qalb-gold/60"
-              }`}
-            >
-              <span
-                dir="rtl"
-                lang="ar"
-                className={`font-quran text-xs font-semibold leading-[2.0] ${
-                  isSelected ? "text-white" : "text-qalb-ink dark:text-qalb-night-ink"
+            <div key={preset.id} className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => handleSelectPreset(preset)}
+                className={`flex flex-col items-center justify-center pl-4 pr-7 py-2 rounded-2xl border transition-all min-w-[124px] text-center ${
+                  isSelected
+                    ? "bg-qalb-green text-white border-qalb-green shadow-sm"
+                    : "bg-qalb-card dark:bg-qalb-night-card border-qalb-border dark:border-qalb-night-border text-qalb-ink dark:text-qalb-night-ink hover:border-qalb-gold/60"
                 }`}
               >
-                {preset.arabic}
-              </span>
-              <span
-                className={`text-[10px] mt-0.5 font-sans ${
-                  isSelected ? "text-white/80" : "text-qalb-muted"
+                <span
+                  dir="rtl"
+                  lang="ar"
+                  className={`font-quran text-xs font-semibold leading-[2.0] ${
+                    isSelected ? "text-white" : "text-qalb-ink dark:text-qalb-night-ink"
+                  }`}
+                >
+                  {preset.arabic}
+                </span>
+                <span
+                  className={`text-[10px] mt-0.5 font-sans ${
+                    isSelected ? "text-white/80" : "text-qalb-muted"
+                  }`}
+                >
+                  {preset.name} • {preset.target}
+                </span>
+              </button>
+
+              {/* Three-dots menu button */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const dropdownWidth = 112;
+                  const left = Math.max(
+                    8,
+                    Math.min(rect.right - dropdownWidth, window.innerWidth - dropdownWidth - 8)
+                  );
+                  setMenuAnchor((prev) =>
+                    prev?.id === preset.id
+                      ? null
+                      : { id: preset.id, top: rect.bottom + 6, left }
+                  );
+                }}
+                aria-label={`Options for ${preset.name}`}
+                title="Options"
+                className={`absolute top-2 right-1.5 p-1 rounded-full transition-colors ${
+                  isSelected
+                    ? "text-white/80 hover:text-white hover:bg-white/20"
+                    : "text-qalb-muted hover:text-qalb-ink dark:hover:text-qalb-night-ink hover:bg-black/5 dark:hover:bg-white/5"
                 }`}
               >
-                {preset.name} • {preset.target}
-              </span>
-            </button>
+                <MoreVertical className="w-3.5 h-3.5" />
+              </button>
+            </div>
           );
         })}
       </div>
@@ -258,7 +465,7 @@ export default function TasbihPage() {
                 stroke="#1D7A5C"
                 strokeWidth="7"
                 strokeDasharray={2 * Math.PI * 82}
-                strokeDashoffset={2 * Math.PI * 82 * (1 - tasbihCount / target)}
+                strokeDashoffset={2 * Math.PI * 82 * (1 - currentCount / target)}
                 strokeLinecap="round"
                 transform="rotate(-90 100 100)"
                 className="transition-all duration-150 ease-out"
@@ -268,13 +475,13 @@ export default function TasbihPage() {
             {/* Decluttered Inside: Only current cycle count */}
             <div className="relative z-10 flex flex-col items-center justify-center pointer-events-none">
               <span className="text-5xl sm:text-6xl font-bold text-qalb-ink dark:text-qalb-night-ink tracking-tight tabular-nums">
-                {tasbihCount}
+                {currentCount}
               </span>
               <span className="text-xs font-semibold text-qalb-muted font-sans mt-0.5">
                 / {target}
               </span>
               <span className="mt-2 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#E3F2ED] text-[#1D7A5C]">
-                {tasbihCycles} cycles • {percentInCycle}%
+                {currentCycles} cycles • {percentInCycle}%
               </span>
               <span className="text-[10px] text-qalb-muted mt-2 uppercase tracking-wider font-semibold">
                 Tap Circle
@@ -286,14 +493,14 @@ export default function TasbihPage() {
         {/* Subtitle helper */}
         <p className="text-[11px] text-qalb-muted">
           {remainingInCycle} left to complete cycle •{" "}
-          <strong className="text-qalb-green dark:text-qalb-gold">{tasbihCycles}x completed</strong>
+          <strong className="text-qalb-green dark:text-qalb-gold">{currentCycles}x completed</strong>
         </p>
 
         {/* 3 Separate Reset Buttons */}
         <div className="flex items-center justify-center gap-2 pt-1 flex-wrap">
           {/* Reset Count */}
           <button
-            onClick={resetTasbihCount}
+            onClick={() => resetTasbihCount(selectedPreset.id)}
             className="flex items-center gap-1.5 py-2 px-4 rounded-xl text-xs font-semibold bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border text-qalb-ink dark:text-qalb-night-ink hover:border-qalb-gold transition-all active:scale-95 shadow-xs"
           >
             <RotateCcw className="w-3.5 h-3.5 text-qalb-muted" />
@@ -302,7 +509,7 @@ export default function TasbihPage() {
 
           {/* Reset Cycles */}
           <button
-            onClick={resetTasbihCycles}
+            onClick={() => resetTasbihCycles(selectedPreset.id)}
             className="flex items-center gap-1.5 py-2 px-4 rounded-xl text-xs font-semibold bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border text-qalb-ink dark:text-qalb-night-ink hover:border-qalb-gold transition-all active:scale-95 shadow-xs"
           >
             <RotateCcw className="w-3.5 h-3.5 text-qalb-muted" />
@@ -359,7 +566,7 @@ export default function TasbihPage() {
         </div>
       </section>
 
-      {/* Moved Out: Daily & Weekly Total Stats Cards */}
+      {/* Daily & Weekly Total Stats Cards */}
       <section className="grid grid-cols-2 gap-2.5">
         <div className="p-4 rounded-2xl bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border shadow-qalb-card space-y-1.5">
           <span className="text-[10px] font-bold uppercase tracking-wider text-qalb-muted">
@@ -447,58 +654,131 @@ export default function TasbihPage() {
         </div>
       </section>
 
-      {/* Add Custom Preset Modal */}
-      {showAddModal && (
+      {/* Floating Three-Dots Dropdown Menu */}
+      {menuAnchor && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuAnchor(null);
+            }}
+          />
+          <div
+            className="fixed z-50 w-28 rounded-xl bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border shadow-lg py-1 text-xs"
+            style={{ top: `${menuAnchor.top}px`, left: `${menuAnchor.left}px` }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                const targetPreset = presets.find((p) => p.id === menuAnchor.id);
+                if (targetPreset) handleOpenEditModal(targetPreset);
+                setMenuAnchor(null);
+              }}
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-qalb-ink dark:text-qalb-night-ink hover:bg-qalb-card-subtle dark:hover:bg-qalb-night-subtle transition-colors"
+            >
+              <Edit2 className="w-3.5 h-3.5 text-qalb-muted" />
+              <span>Edit</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={presets.length <= 1}
+              onClick={() => {
+                handleDeletePreset(menuAnchor.id);
+                setMenuAnchor(null);
+              }}
+              className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors ${
+                presets.length <= 1
+                  ? "text-qalb-muted/40 cursor-not-allowed"
+                  : "text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30"
+              }`}
+              title={presets.length <= 1 ? "Cannot delete the last remaining Tasbih" : "Delete Tasbih"}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete</span>
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Add / Edit Tasbih Modal */}
+      {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-3xl p-5 bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border shadow-xl space-y-3">
-            <h3 className="text-sm font-bold text-qalb-ink dark:text-qalb-night-ink">
-              Add Custom Dhikr
-            </h3>
-            <input
-              type="text"
-              placeholder="Arabic text (e.g. سُبْحَانَ اللَّهِ)"
-              dir="rtl"
-              value={newArabic}
-              onChange={(e) => setNewArabic(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl border bg-qalb-card-subtle border-qalb-border outline-none font-quran leading-[2.0]"
-            />
-            <input
-              type="text"
-              placeholder="Title / Transliteration (e.g. SubhanAllah)"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl border bg-qalb-card-subtle border-qalb-border outline-none font-sans"
-            />
-            <input
-              type="number"
-              placeholder="Target Count (e.g. 33 or 100)"
-              value={newTarget}
-              onChange={(e) => setNewTarget(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl border bg-qalb-card-subtle border-qalb-border outline-none font-sans"
-            />
+          <div className="w-full max-w-sm rounded-3xl p-5 bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border shadow-xl space-y-3.5">
+            <div className="flex items-center justify-between pb-1 border-b border-qalb-border/50 dark:border-qalb-night-border/50">
+              <h3 className="text-sm font-bold text-qalb-ink dark:text-qalb-night-ink">
+                {modalMode === "edit" ? "Edit Tasbih" : "Add Custom Dhikr"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="p-1 rounded-full text-qalb-muted hover:text-qalb-ink dark:hover:text-qalb-night-ink"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[10px] font-semibold text-qalb-muted mb-1 uppercase tracking-wider">
+                  Arabic Text (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="سُبْحَانَ ٱللَّٰهِ"
+                  dir="rtl"
+                  lang="ar"
+                  value={formArabic}
+                  onChange={(e) => setFormArabic(e.target.value)}
+                  className="w-full px-3 py-2 text-sm rounded-xl border bg-qalb-card-subtle dark:bg-qalb-night-subtle border-qalb-border dark:border-qalb-night-border text-qalb-ink dark:text-qalb-night-ink outline-none focus:border-qalb-gold font-quran leading-[2.0]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold text-qalb-muted mb-1 uppercase tracking-wider">
+                  Title / Transliteration *
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. SubhanAllah"
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border bg-qalb-card-subtle dark:bg-qalb-night-subtle border-qalb-border dark:border-qalb-night-border text-qalb-ink dark:text-qalb-night-ink outline-none focus:border-qalb-gold font-sans"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold text-qalb-muted mb-1 uppercase tracking-wider">
+                  Target Count *
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="33"
+                  value={formTarget}
+                  onChange={(e) => setFormTarget(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border bg-qalb-card-subtle dark:bg-qalb-night-subtle border-qalb-border dark:border-qalb-night-border text-qalb-ink dark:text-qalb-night-ink outline-none focus:border-qalb-gold font-sans"
+                />
+              </div>
+            </div>
+
             <div className="flex gap-2 pt-2">
               <button
-                onClick={() => setShowAddModal(false)}
-                className="flex-1 py-2 text-xs font-semibold rounded-xl bg-qalb-card-subtle text-qalb-ink"
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="flex-1 py-2 text-xs font-semibold rounded-xl bg-qalb-card-subtle dark:bg-qalb-night-subtle text-qalb-ink dark:text-qalb-night-ink border border-qalb-border dark:border-qalb-night-border hover:bg-qalb-border/30 transition-colors"
               >
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  if (newName) {
-                    PRESETS.push({
-                      id: `custom-${Date.now()}`,
-                      arabic: newArabic || newName,
-                      name: newName,
-                      meaning: "Custom Dhikr",
-                      target: parseInt(newTarget, 10) || 33,
-                    });
-                    setShowAddModal(false);
-                  }
-                }}
-                className="flex-1 py-2 text-xs font-semibold rounded-xl bg-qalb-green text-white"
+                type="button"
+                disabled={!formName.trim()}
+                onClick={handleSubmitModal}
+                className="flex-1 py-2 text-xs font-semibold rounded-xl bg-qalb-green text-white hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
               >
-                Add
+                {modalMode === "edit" ? "Save Changes" : "Add"}
               </button>
             </div>
           </div>
