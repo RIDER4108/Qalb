@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Smartphone, Plus, RotateCcw, Volume2, VolumeX, Check } from "lucide-react";
+import { Smartphone, Plus, RotateCcw, Volume2, VolumeX, AlertTriangle } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 
 interface DhikrPreset {
@@ -28,6 +28,9 @@ export default function TasbihPage() {
     tasbihTodayTotal,
     incrementTasbih,
     resetTasbih,
+    resetTasbihCount,
+    resetTasbihCycles,
+    resetTasbihTotal,
   } = useApp();
 
   const [selectedPreset, setSelectedPreset] = useState<DhikrPreset>(PRESETS[0]);
@@ -35,6 +38,7 @@ export default function TasbihPage() {
   const [soundEnabled, setSoundEnabled] = useState<boolean>(false);
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const [isPressing, setIsPressing] = useState<boolean>(false);
+  const [confirmResetTotal, setConfirmResetTotal] = useState<boolean>(false);
 
   // Custom preset form
   const [newArabic, setNewArabic] = useState("");
@@ -241,18 +245,49 @@ export default function TasbihPage() {
           <strong className="text-qalb-green dark:text-qalb-gold">{tasbihCycles}x completed</strong>
         </p>
 
-        {/* Unified Pill Control Buttons: Reset, Haptic, Sound */}
-        <div className="flex items-center justify-center gap-2 pt-1">
-          {/* Reset Pill */}
+        {/* 3 Separate Reset Buttons */}
+        <div className="flex items-center justify-center gap-2 pt-1 flex-wrap">
+          {/* Reset Count */}
           <button
-            onClick={resetTasbih}
+            onClick={resetTasbihCount}
             className="flex items-center gap-1.5 py-2 px-4 rounded-xl text-xs font-semibold bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border text-qalb-ink dark:text-qalb-night-ink hover:border-qalb-gold transition-all active:scale-95 shadow-xs"
           >
             <RotateCcw className="w-3.5 h-3.5 text-qalb-muted" />
-            <span>Reset</span>
+            <span>Reset Count</span>
           </button>
 
-          {/* Haptic Pill with clean unified design & active state */}
+          {/* Reset Cycles */}
+          <button
+            onClick={resetTasbihCycles}
+            className="flex items-center gap-1.5 py-2 px-4 rounded-xl text-xs font-semibold bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border text-qalb-ink dark:text-qalb-night-ink hover:border-qalb-gold transition-all active:scale-95 shadow-xs"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-qalb-muted" />
+            <span>Reset Cycles</span>
+          </button>
+
+          {/* Reset Total — with one-tap confirmation */}
+          {confirmResetTotal ? (
+            <button
+              onClick={() => { resetTasbihTotal(); setConfirmResetTotal(false); }}
+              className="flex items-center gap-1.5 py-2 px-4 rounded-xl text-xs font-semibold bg-red-600 text-white border border-red-600 transition-all active:scale-95 shadow-xs"
+            >
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span>Confirm Reset</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setConfirmResetTotal(true)}
+              className="flex items-center gap-1.5 py-2 px-4 rounded-xl text-xs font-semibold bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border text-qalb-ink dark:text-qalb-night-ink hover:border-red-400 transition-all active:scale-95 shadow-xs"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-qalb-muted" />
+              <span>Reset Total</span>
+            </button>
+          )}
+        </div>
+
+        {/* Haptic & Sound Controls */}
+        <div className="flex items-center justify-center gap-2">
+          {/* Haptic Pill */}
           <button
             onClick={() => setHapticEnabled(!hapticEnabled)}
             className={`flex items-center gap-1.5 py-2 px-4 rounded-xl text-xs font-semibold border transition-all active:scale-95 shadow-xs ${

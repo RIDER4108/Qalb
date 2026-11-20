@@ -2,6 +2,15 @@ import { AladhanApiResponse, LocationConfig, PrayerItem, PrayerTimings } from "@
 
 const ALADHAN_BASE_URL = "https://api.aladhan.com/v1";
 
+/** Returns the user's local date as DD-MM-YYYY — always computed at call time, never build-time. */
+function getLocalDateString(): string {
+  const now = new Date();
+  const dd = String(now.getDate()).padStart(2, "0");
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const yyyy = now.getFullYear();
+  return `${dd}-${mm}-${yyyy}`;
+}
+
 export const DEFAULT_LOCATIONS: LocationConfig[] = [
   { city: "Makkah", country: "Saudi Arabia", displayName: "Makkah, KSA", method: 4, latitude: 21.4225, longitude: 39.8262 },
   { city: "Madinah", country: "Saudi Arabia", displayName: "Madinah, KSA", method: 4, latitude: 24.4672, longitude: 39.6111 },
@@ -20,10 +29,11 @@ export async function getPrayerTimesByCity(
   country: string,
   method: number = 4
 ): Promise<AladhanApiResponse> {
-  const url = `${ALADHAN_BASE_URL}/timingsByCity?city=${encodeURIComponent(city)}&country=${encodeURIComponent(country)}&method=${method}`;
-  
+  const date = getLocalDateString();
+  const url = `${ALADHAN_BASE_URL}/timingsByCity/${date}?city=${encodeURIComponent(city)}&country=${encodeURIComponent(country)}&method=${method}`;
+
   const response = await fetch(url, {
-    next: { revalidate: 3600 }, // Cache 1 hour
+    cache: "no-store",
   });
 
   if (!response.ok) {
@@ -38,11 +48,11 @@ export async function getPrayerTimesByCoords(
   longitude: number,
   method: number = 4
 ): Promise<AladhanApiResponse> {
-  const now = Math.floor(Date.now() / 1000);
-  const url = `${ALADHAN_BASE_URL}/timings/${now}?latitude=${latitude}&longitude=${longitude}&method=${method}`;
+  const date = getLocalDateString();
+  const url = `${ALADHAN_BASE_URL}/timings/${date}?latitude=${latitude}&longitude=${longitude}&method=${method}`;
 
   const response = await fetch(url, {
-    next: { revalidate: 3600 },
+    cache: "no-store",
   });
 
   if (!response.ok) {

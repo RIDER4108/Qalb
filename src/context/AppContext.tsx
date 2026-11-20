@@ -42,6 +42,13 @@ export interface AppContextType {
   tasbihTodayTotal: number;
   incrementTasbih: (target: number) => void;
   resetTasbih: () => void;
+  resetTasbihCount: () => void;
+  resetTasbihCycles: () => void;
+  resetTasbihTotal: () => void;
+
+  // GPS
+  gpsPermissionDenied: boolean;
+  requestGpsLocation: () => void;
 
   // Adhkar
   adhkarCounts: Record<string, number>;
@@ -80,6 +87,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [qiblaInfo, setQiblaInfo] = useState<QiblaCalculationResult>(() =>
     computeQibla(DEFAULT_LOCATIONS[0].latitude || 21.4225, DEFAULT_LOCATIONS[0].longitude || 39.8262)
   );
+
+  // GPS
+  const [gpsPermissionDenied, setGpsPermissionDenied] = useState<boolean>(false);
 
   // Prayer Checkbox history: { [dateKey]: { [prayerKey]: boolean } }
   const [prayerHistory, setPrayerHistory] = useState<Record<string, Record<string, boolean>>>({});
@@ -163,7 +173,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const lat = currentLocation.latitude ?? 21.4225;
     const lng = currentLocation.longitude ?? 39.8262;
+    // Compute local bearing first (instant feedback)
     setQiblaInfo(computeQibla(lat, lng));
+    // Then fetch authoritative bearing from Aladhan Qibla API
+    fetch(`https://api.aladhan.com/v1/qibla/${lat}/${lng}`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json?.data?.direction != null) {
+          const bearing = Math.round(json.data.direction);
+          setQiblaInfo((prev) => ({ ...prev, bearing }));
+        }
+      })
+      .catch(() => {}); // silently fall back to Haversine result
   }, [currentLocation]);
 
   // Load Prayer Timings
@@ -192,21 +213,53 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     fetchTimings(currentLocation);
   }, [currentLocation, fetchTimings]);
 
-  // Periodic ticker for next prayer
+  // Periodic ticker for next prayer + midnight re-fetch
   useEffect(() => {
     if (!prayerTimings) return;
+    let lastKey = getTodayKey();
     const interval = setInterval(() => {
       const computed = computePrayerSchedule(prayerTimings);
       setPrayers(computed.prayers);
       setNextPrayer(computed.nextPrayerInfo.nextPrayer);
+      // Detect day rollover and re-fetch timings for the new day
+      const currentKey = getTodayKey();
+      if (currentKey !== lastKey) {
+        lastKey = currentKey;
+        fetchTimings(currentLocation);
+      }
     }, 1000);
     return () => clearInterval(interval);
-  }, [prayerTimings]);
+  }, [prayerTimings, currentLocation, fetchTimings]);
 
   const setLocation = (loc: LocationConfig) => {
     setCurrentLocation(loc);
     localStorage.setItem("qalb-location", JSON.stringify(loc));
   };
+
+  // GPS location request
+  const requestGpsLocation = useCallback(() => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setGpsPermissionDenied(true);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const loc: LocationConfig = {
+          city: "Current Location",
+          country: "GPS",
+          displayName: "Current Location (GPS)",
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          method: 2,
+        };
+        setCurrentLocation(loc);
+        localStorage.setItem("qalb-location", JSON.stringify(loc));
+        setGpsPermissionDenied(false);
+      },
+      () => setGpsPermissionDenied(true),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  }, []);
 
   // Prayer Checkbox Sync
   const isPrayerCompletedForDate = (dateKey: string, prayerName: string) => {
@@ -307,6 +360,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  const resetTasbihCount = () => {
+    setTasbihCount(0);
+    localStorage.setItem(
+      "qalb-tasbih",
+      JSON.stringify({ count: 0, cycles: tasbihCycles, todayTotal: tasbihTodayTotal })
+    );
+  };
+
+  const resetTasbihCycles = () => {
+    setTasbihCycles(0);
+    localStorage.setItem(
+      "qalb-tasbih",
+      JSON.stringify({ count: tasbihCount, cycles: 0, todayTotal: tasbihTodayTotal })
+    );
+  };
+
+  const resetTasbihTotal = () => {
+    setTasbihTodayTotal(0);
+    localStorage.setItem(
+      "qalb-tasbih",
+      JSON.stringify({ count: tasbihCount, cycles: tasbihCycles, todayTotal: 0 })
+    );
+  };
+
   // Adhkar actions
   const incrementAdhkar = (id: string, target: number) => {
     setAdhkarCounts((prev) => {
@@ -395,6 +472,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         tasbihTodayTotal,
         incrementTasbih,
         resetTasbih,
+        resetTasbihCount,
+        resetTasbihCycles,
+        resetTasbihTotal,
+        gpsPermissionDenied,
+        requestGpsLocation,
         adhkarCounts,
         incrementAdhkar,
         resetAdhkar,
