@@ -113,13 +113,16 @@ export default function QiblaPage() {
     <main className="space-y-4">
       {/* Header */}
       <header className="flex items-center justify-between pt-1 pb-1">
-        <div>
-          <h1 className="text-xl font-bold text-qalb-ink dark:text-qalb-night-ink">
-            Qibla Finder
-          </h1>
-          <p className="text-xs text-qalb-muted font-sans">
-            Face the Kaaba • Al-Masjid Al-Haram
-          </p>
+        <div className="flex items-center gap-2.5">
+          <img src="/qalb-logo.png" alt="Qalb" className="w-8 h-8 rounded-lg object-cover" />
+          <div>
+            <h1 className="text-xl font-bold text-qalb-ink dark:text-qalb-night-ink">
+              Qibla Finder
+            </h1>
+            <p className="text-xs text-qalb-muted font-sans">
+              Face the Kaaba • Al-Masjid Al-Haram
+            </p>
+          </div>
         </div>
 
         <button

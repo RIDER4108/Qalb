@@ -136,13 +136,16 @@ export default function TrackerPage() {
     <main className="space-y-4">
       {/* Header */}
       <header className="flex items-center justify-between pt-1 pb-1">
-        <div>
-          <h1 className="text-xl font-bold text-qalb-ink dark:text-qalb-night-ink tracking-tight">
-            Ibadah Tracker
-          </h1>
-          <p className="text-xs text-qalb-muted font-sans">
-            Build consistency • Private to you
-          </p>
+        <div className="flex items-center gap-2.5">
+          <img src="/qalb-logo.png" alt="Qalb" className="w-8 h-8 rounded-lg object-cover" />
+          <div>
+            <h1 className="text-xl font-bold text-qalb-ink dark:text-qalb-night-ink tracking-tight">
+              Ibadah Tracker
+            </h1>
+            <p className="text-xs text-qalb-muted font-sans">
+              Build consistency • Private to you
+            </p>
+          </div>
         </div>
 
         {/* Real Dynamic Streak Badge */}

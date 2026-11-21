@@ -55,20 +55,23 @@ export function HomeHeader() {
     <>
       <header className="flex items-center justify-between pt-1 pb-2">
         {/* Left: Greeting & Location */}
-        <div>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-qalb-muted font-sans">
-            AS-SALAMU ALAIKUM
-          </span>
-          <button
-            onClick={() => setShowLocationModal(true)}
-            className="flex items-center gap-1.5 mt-0.5 text-xs font-semibold text-qalb-ink dark:text-qalb-night-ink hover:text-qalb-green transition-colors"
-          >
-            <MapPin className="w-3.5 h-3.5 text-qalb-gold shrink-0" />
-            <span className="truncate max-w-[170px]">
-              {isLoadingPrayers ? "Locating..." : `${currentLocation.city} • Auto-detected`}
+        <div className="flex items-center gap-2.5">
+          <img src="/qalb-logo.png" alt="Qalb" className="w-8 h-8 rounded-lg object-cover" />
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-qalb-muted font-sans">
+              AS-SALAMU ALAIKUM
             </span>
-            <ChevronDown className="w-3 h-3 text-qalb-muted" />
-          </button>
+            <button
+              onClick={() => setShowLocationModal(true)}
+              className="flex items-center gap-1.5 mt-0.5 text-xs font-semibold text-qalb-ink dark:text-qalb-night-ink hover:text-qalb-green transition-colors"
+            >
+              <MapPin className="w-3.5 h-3.5 text-qalb-gold shrink-0" />
+              <span className="truncate max-w-[170px]">
+                {isLoadingPrayers ? "Locating..." : `${currentLocation.city} • Auto-detected`}
+              </span>
+              <ChevronDown className="w-3 h-3 text-qalb-muted" />
+            </button>
+          </div>
         </div>
 
         {/* Right: Notifications & Settings Buttons */}
@@ -175,8 +178,16 @@ export function HomeHeader() {
               </button>
             </div>
 
-            <div className="pt-2 text-[11px] text-qalb-muted">
-              App Version 1.0 • Qalb (قَلْب)
+            <div className="flex items-center gap-2.5 pt-2 border-t border-qalb-border dark:border-qalb-night-border">
+              <img src="/qalb-logo.png" alt="Qalb" className="w-8 h-8 rounded-lg object-cover" />
+              <div>
+                <div className="text-xs font-bold text-qalb-ink dark:text-qalb-night-ink">
+                  Qalb (قَلْب)
+                </div>
+                <div className="text-[10px] text-qalb-muted">
+                  App Version 1.0 • Daily Prayer, Quran &amp; Dhikr
+                </div>
+              </div>
             </div>
 
             <button

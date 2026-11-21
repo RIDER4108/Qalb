@@ -22,8 +22,12 @@ export const metadata: Metadata = {
     title: "Qalb",
   },
   icons: {
-    icon: "/icon.svg",
-    apple: "/icon.svg",
+    icon: [
+      { url: "/qalb-logo.png", sizes: "any", type: "image/png" },
+    ],
+    apple: [
+      { url: "/qalb-logo.png", sizes: "180x180", type: "image/png" },
+    ],
   },
 };
 
@@ -46,7 +50,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/qalb-logo.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/qalb-logo.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

@@ -3,7 +3,7 @@ const CACHE_NAME = 'nur-cache-v1';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
-  '/icon.svg'
+  '/qalb-logo.png'
 ];
 
 self.addEventListener('install', (event) => {

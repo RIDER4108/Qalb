@@ -54,6 +54,7 @@ export default function QuranCatalogPage() {
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
+          <img src="/qalb-logo.png" alt="Qalb" className="w-8 h-8 rounded-lg object-cover" />
           <div>
             <h1 className="text-xl font-bold tracking-tight text-qalb-ink dark:text-qalb-night-ink">
               The Noble Quran
