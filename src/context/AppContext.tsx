@@ -83,6 +83,11 @@ export interface AppContextType {
   reminders: Record<string, boolean>;
   toggleReminder: (prayerName: string) => void;
   saveReminders: (updated: Record<string, boolean>) => void;
+
+  // Theme
+  theme: "light" | "dark";
+  toggleTheme: () => void;
+  setTheme: (theme: "light" | "dark") => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -108,6 +113,57 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [qiblaInfo, setQiblaInfo] = useState<QiblaCalculationResult>(() =>
     computeQibla(DEFAULT_LOCATIONS[0].latitude || 21.4225, DEFAULT_LOCATIONS[0].longitude || 39.8262)
   );
+
+  // Theme State
+  const [theme, setThemeState] = useState<"light" | "dark">("dark");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const stored = localStorage.getItem("theme") || localStorage.getItem("nur-theme");
+      if (stored === "light" || stored === "dark") {
+        setThemeState(stored);
+        document.documentElement.classList.toggle("dark", stored === "dark");
+      } else {
+        const isDark =
+          document.documentElement.classList.contains("dark") ||
+          window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const initial = isDark ? "dark" : "light";
+        setThemeState(initial);
+        document.documentElement.classList.toggle("dark", isDark);
+      }
+    } catch (_) {}
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "theme" && (e.newValue === "light" || e.newValue === "dark")) {
+        setThemeState(e.newValue);
+        document.documentElement.classList.toggle("dark", e.newValue === "dark");
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
+  const setTheme = useCallback((newTheme: "light" | "dark") => {
+    setThemeState(newTheme);
+    try {
+      localStorage.setItem("theme", newTheme);
+      localStorage.setItem("nur-theme", newTheme);
+    } catch (_) {}
+    document.documentElement.classList.toggle("dark", newTheme === "dark");
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setThemeState((prev) => {
+      const next = prev === "dark" ? "light" : "dark";
+      try {
+        localStorage.setItem("theme", next);
+        localStorage.setItem("nur-theme", next);
+      } catch (_) {}
+      document.documentElement.classList.toggle("dark", next === "dark");
+      return next;
+    });
+  }, []);
 
   // GPS
   const [gpsPermissionDenied, setGpsPermissionDenied] = useState<boolean>(false);
@@ -796,6 +852,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         reminders,
         toggleReminder,
         saveReminders,
+        theme,
+        toggleTheme,
+        setTheme,
       }}
     >
       {children}

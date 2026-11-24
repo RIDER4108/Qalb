@@ -4,9 +4,11 @@ import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { getAllChapters } from "@/services/quran";
 import { Chapter } from "@/types/quran";
-import { Search, ArrowLeft } from "lucide-react";
+import { PARAHS_LIST, ParahMeta } from "@/data/parahs";
+import { Search, ArrowLeft, BookOpen, Layers } from "lucide-react";
 
 export default function QuranCatalogPage() {
+  const [viewMode, setViewMode] = useState<"surah" | "parah">("surah");
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterPlace, setFilterPlace] = useState<"all" | "makkah" | "madinah">("all");
@@ -30,11 +32,13 @@ export default function QuranCatalogPage() {
 
   const filteredChapters = useMemo(() => {
     return chapters.filter((ch) => {
+      const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
-        ch.name_simple.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        ch.translated_name.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        ch.name_arabic.includes(searchQuery) ||
-        ch.id.toString() === searchQuery.trim();
+        !q ||
+        ch.name_simple.toLowerCase().includes(q) ||
+        ch.translated_name.name.toLowerCase().includes(q) ||
+        ch.name_arabic.includes(q) ||
+        ch.id.toString() === q;
 
       const matchesPlace =
         filterPlace === "all" || ch.revelation_place === filterPlace;
@@ -42,6 +46,20 @@ export default function QuranCatalogPage() {
       return matchesSearch && matchesPlace;
     });
   }, [chapters, searchQuery, filterPlace]);
+
+  const filteredParahs = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return PARAHS_LIST;
+    return PARAHS_LIST.filter((p) => {
+      return (
+        p.id.toString() === q ||
+        p.nameEnglish.toLowerCase().includes(q) ||
+        p.nameArabic.includes(q) ||
+        p.startRef.toLowerCase().includes(q) ||
+        p.endRef.toLowerCase().includes(q)
+      );
+    });
+  }, [searchQuery]);
 
   return (
     <main className="space-y-4">
@@ -60,57 +78,96 @@ export default function QuranCatalogPage() {
               The Noble Quran
             </h1>
             <p className="text-xs text-qalb-muted font-sans">
-              114 Chapters • Verified Uthmani Script
+              114 Chapters • 30 Parahs • Uthmani Script
             </p>
           </div>
         </div>
       </header>
+
+      {/* Surah | Parah Segmented Toggle */}
+      <div className="grid grid-cols-2 p-1 rounded-2xl bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border shadow-xs">
+        <button
+          onClick={() => {
+            setViewMode("surah");
+            setSearchQuery("");
+          }}
+          className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            viewMode === "surah"
+              ? "bg-qalb-green dark:bg-qalb-gold text-white dark:text-qalb-night-bg shadow-xs"
+              : "text-qalb-muted hover:text-qalb-ink dark:hover:text-white"
+          }`}
+        >
+          <BookOpen className="w-3.5 h-3.5" />
+          <span>Surah (114)</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setViewMode("parah");
+            setSearchQuery("");
+          }}
+          className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            viewMode === "parah"
+              ? "bg-qalb-green dark:bg-qalb-gold text-white dark:text-qalb-night-bg shadow-xs"
+              : "text-qalb-muted hover:text-qalb-ink dark:hover:text-white"
+          }`}
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span>Parah (Juz 1–30)</span>
+        </button>
+      </div>
 
       {/* Search Bar */}
       <div className="relative">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-qalb-muted" />
         <input
           type="text"
-          placeholder="Search by Surah name, meaning, or number..."
+          placeholder={
+            viewMode === "surah"
+              ? "Search by Surah name, meaning, or number..."
+              : "Search Parah by number or name (e.g. 1, Amma, Alif Lam Meem)..."
+          }
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full pl-10 pr-4 py-3 rounded-2xl border text-xs sm:text-sm transition-all outline-none bg-qalb-card dark:bg-qalb-night-card border-qalb-border dark:border-qalb-night-border text-qalb-ink dark:text-qalb-night-ink placeholder:text-qalb-muted focus:border-qalb-gold shadow-sm font-sans"
         />
       </div>
 
-      {/* Revelation Filter Pills */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => setFilterPlace("all")}
-          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all border ${
-            filterPlace === "all"
-              ? "bg-qalb-green text-white border-qalb-green shadow-sm"
-              : "bg-qalb-card dark:bg-qalb-night-card text-qalb-muted border-qalb-border dark:border-qalb-night-border hover:border-qalb-gold"
-          }`}
-        >
-          All (114)
-        </button>
-        <button
-          onClick={() => setFilterPlace("makkah")}
-          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all border ${
-            filterPlace === "makkah"
-              ? "bg-qalb-green text-white border-qalb-green shadow-sm"
-              : "bg-qalb-card dark:bg-qalb-night-card text-qalb-muted border-qalb-border dark:border-qalb-night-border hover:border-qalb-gold"
-          }`}
-        >
-          Makki
-        </button>
-        <button
-          onClick={() => setFilterPlace("madinah")}
-          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all border ${
-            filterPlace === "madinah"
-              ? "bg-qalb-green text-white border-qalb-green shadow-sm"
-              : "bg-qalb-card dark:bg-qalb-night-card text-qalb-muted border-qalb-border dark:border-qalb-night-border hover:border-qalb-gold"
-          }`}
-        >
-          Madani
-        </button>
-      </div>
+      {/* Surah-Only Filters */}
+      {viewMode === "surah" && (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setFilterPlace("all")}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+              filterPlace === "all"
+                ? "bg-qalb-green text-white border-qalb-green shadow-sm"
+                : "bg-qalb-card dark:bg-qalb-night-card text-qalb-muted border-qalb-border dark:border-qalb-night-border hover:border-qalb-gold"
+            }`}
+          >
+            All (114)
+          </button>
+          <button
+            onClick={() => setFilterPlace("makkah")}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+              filterPlace === "makkah"
+                ? "bg-qalb-green text-white border-qalb-green shadow-sm"
+                : "bg-qalb-card dark:bg-qalb-night-card text-qalb-muted border-qalb-border dark:border-qalb-night-border hover:border-qalb-gold"
+            }`}
+          >
+            Makki
+          </button>
+          <button
+            onClick={() => setFilterPlace("madinah")}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+              filterPlace === "madinah"
+                ? "bg-qalb-green text-white border-qalb-green shadow-sm"
+                : "bg-qalb-card dark:bg-qalb-night-card text-qalb-muted border-qalb-border dark:border-qalb-night-border hover:border-qalb-gold"
+            }`}
+          >
+            Madani
+          </button>
+        </div>
+      )}
 
       {/* Loading Skeleton */}
       {isLoading && (
@@ -131,8 +188,8 @@ export default function QuranCatalogPage() {
         </div>
       )}
 
-      {/* Chapters Grid */}
-      {!isLoading && !error && (
+      {/* SURAH VIEW LIST */}
+      {!isLoading && !error && viewMode === "surah" && (
         <div className="space-y-2">
           {filteredChapters.map((ch) => (
             <Link
@@ -150,7 +207,7 @@ export default function QuranCatalogPage() {
                     <h3 className="text-xs sm:text-sm font-bold text-qalb-ink dark:text-qalb-night-ink group-hover:text-qalb-green dark:group-hover:text-qalb-gold transition-colors">
                       {ch.name_simple}
                     </h3>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded-md uppercase font-semibold bg-qalb-card-subtle dark:bg-qalb-night-subtle text-qalb-muted">
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-md uppercase font-semibold bg-qalb-card-subtle dark:bg-qalb-night-subtle text-qalb-muted font-sans">
                       {ch.revelation_place === "makkah" ? "Makki" : "Madani"}
                     </span>
                   </div>
@@ -174,6 +231,51 @@ export default function QuranCatalogPage() {
           {filteredChapters.length === 0 && (
             <div className="text-center py-12 text-xs text-qalb-muted">
               No Surahs found matching &quot;{searchQuery}&quot;.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* PARAH (JUZ 1-30) VIEW LIST */}
+      {!isLoading && !error && viewMode === "parah" && (
+        <div className="space-y-2">
+          {filteredParahs.map((p) => (
+            <Link
+              key={p.id}
+              href={`/quran/juz/${p.id}`}
+              className="group flex items-center justify-between p-3.5 rounded-2xl transition-all duration-200 border bg-qalb-card dark:bg-qalb-night-card border-qalb-border dark:border-qalb-night-border hover:border-qalb-gold/60 shadow-sm active:scale-99"
+            >
+              {/* Left: Number & Transliteration */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-9 h-9 rounded-xl font-bold text-xs bg-qalb-card-subtle dark:bg-qalb-night-subtle text-qalb-green dark:text-qalb-gold border border-qalb-border dark:border-qalb-night-border font-sans shrink-0">
+                  {p.id}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs sm:text-sm font-bold text-qalb-ink dark:text-qalb-night-ink group-hover:text-qalb-green dark:group-hover:text-qalb-gold transition-colors">
+                      Parah {p.id} ({p.nameEnglish})
+                    </h3>
+                  </div>
+                  <p className="text-[11px] text-qalb-muted font-sans">
+                    {p.startRef} – {p.endRef} • {p.totalVerses} Ayahs
+                  </p>
+                </div>
+              </div>
+
+              {/* Right: Traditional Arabic name */}
+              <div
+                dir="rtl"
+                lang="ar"
+                className="font-quran text-xl font-bold text-qalb-green dark:text-qalb-gold leading-[2.0]"
+              >
+                {p.nameArabic}
+              </div>
+            </Link>
+          ))}
+
+          {filteredParahs.length === 0 && (
+            <div className="text-center py-12 text-xs text-qalb-muted">
+              No Parahs found matching &quot;{searchQuery}&quot;.
             </div>
           )}
         </div>

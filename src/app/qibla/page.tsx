@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Navigation, Locate, AlertCircle } from "lucide-react";
+import { Navigation, Locate, AlertCircle, Compass, X } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 
 export default function QiblaPage() {
@@ -11,9 +11,14 @@ export default function QiblaPage() {
   const [calibrating, setCalibrating] = useState<boolean>(false);
   const [needsIosPermission, setNeedsIosPermission] = useState<boolean>(false);
   const [compassActive, setCompassActive] = useState<boolean>(false);
+  const [hasSensorLock, setHasSensorLock] = useState<boolean>(false);
+  const [lowAccuracy, setLowAccuracy] = useState<boolean>(false);
+  const [dismissedCalibrationHint, setDismissedCalibrationHint] = useState<boolean>(false);
 
-  const prevHeadingRef = useRef<number>(0);
+  const smoothedHeadingRef = useRef<number>(0);
   const continuousHeadingRef = useRef<number>(0);
+  const hasSensorLockRef = useRef<boolean>(false);
+  const hasReceivedAbsoluteEventRef = useRef<boolean>(false);
 
   const qiblaBearing = qiblaInfo.bearing;
   const cardinal = qiblaInfo.cardinal;
@@ -25,65 +30,131 @@ export default function QiblaPage() {
     lng >= 0 ? lng.toFixed(2) + "°E" : Math.abs(lng).toFixed(2) + "°W"
   }`;
 
-  // Shortest-path angular smoothing so it never snaps/spins across the 0°/360° boundary
-  const applyHeading = useCallback((rawHeading: number) => {
+  // Helper to get screen orientation angle (handles landscape vs portrait rotation)
+  const getScreenOrientationAngle = (): number => {
+    if (typeof window === "undefined") return 0;
+    if (window.screen?.orientation?.angle !== undefined) {
+      return window.screen.orientation.angle;
+    }
+    if (typeof (window as any).orientation === "number") {
+      return (window as any).orientation;
+    }
+    return 0;
+  };
+
+  // Anti-Jitter Smoothing with Low-Pass Filter
+  // Properly handles 359° -> 0° wrap-around using shortest angular distance
+  const applyHeading = useCallback((rawHeading: number, accuracy?: number | null) => {
     const normalized = ((rawHeading % 360) + 360) % 360;
 
-    let delta = normalized - prevHeadingRef.current;
-    if (delta > 180) delta -= 360;
-    if (delta < -180) delta += 360;
+    // First sensor lock directly snaps to prevent slow convergence from 0°
+    if (!hasSensorLockRef.current) {
+      hasSensorLockRef.current = true;
+      setHasSensorLock(true);
+      smoothedHeadingRef.current = normalized;
+      continuousHeadingRef.current = normalized;
+      setHeading(Math.round(normalized));
+      setContinuousHeading(normalized);
+      setCompassActive(true);
+      return;
+    }
 
+    // Compute shortest angular difference in [-180, 180]
+    let diff = normalized - smoothedHeadingRef.current;
+    while (diff > 180) diff -= 360;
+    while (diff < -180) diff += 360;
+
+    // Adaptive low-pass filter:
+    // For small micro-jitters (|diff| <= 10°), alpha is 0.18 for steady dampening
+    // For larger deliberate rotations, alpha increases to 0.45 for responsiveness
+    const absDiff = Math.abs(diff);
+    const alpha = absDiff > 30 ? 0.45 : absDiff > 10 ? 0.30 : 0.18;
+
+    const delta = alpha * diff;
+    smoothedHeadingRef.current = ((smoothedHeadingRef.current + delta) % 360 + 360) % 360;
     continuousHeadingRef.current += delta;
-    prevHeadingRef.current = normalized;
 
-    setHeading(Math.round(normalized));
+    setHeading(Math.round(smoothedHeadingRef.current));
     setContinuousHeading(continuousHeadingRef.current);
     setCompassActive(true);
+
+    if (accuracy !== undefined && accuracy !== null) {
+      // webkitCompassAccuracy: negative or > 25 indicates low magnetic sensor accuracy
+      setLowAccuracy(accuracy < 0 || accuracy > 25);
+    }
   }, []);
 
-  const handleOrientation = useCallback((e: DeviceOrientationEvent) => {
+  // Android Absolute Orientation handler (deviceorientationabsolute)
+  const handleAbsoluteOrientation = useCallback((e: DeviceOrientationEvent) => {
+    if (e.alpha !== null) {
+      hasReceivedAbsoluteEventRef.current = true;
+      const screenAngle = getScreenOrientationAngle();
+      const trueHeading = ((360 - e.alpha + screenAngle) % 360 + 360) % 360;
+      applyHeading(trueHeading);
+    }
+  }, [applyHeading]);
+
+  // Standard orientation handler (iOS webkitCompassHeading, and Android fallback)
+  const handleStandardOrientation = useCallback((e: DeviceOrientationEvent) => {
     const anyEvent = e as any;
     if (anyEvent.webkitCompassHeading !== undefined && anyEvent.webkitCompassHeading !== null) {
-      // iOS: webkitCompassHeading is degrees clockwise from true North
-      applyHeading(anyEvent.webkitCompassHeading);
-    } else if (e.absolute && e.alpha !== null) {
-      // Android absolute orientation
-      applyHeading((360 - e.alpha) % 360);
-    } else if (e.alpha !== null) {
-      // Fallback
-      applyHeading((360 - e.alpha) % 360);
+      // iOS: webkitCompassHeading is true degrees clockwise from North
+      applyHeading(anyEvent.webkitCompassHeading, anyEvent.webkitCompassAccuracy);
+    } else if (!hasReceivedAbsoluteEventRef.current && e.alpha !== null) {
+      // Fallback for Android/devices where absolute wasn't fired
+      const screenAngle = getScreenOrientationAngle();
+      const trueHeading = ((360 - e.alpha + screenAngle) % 360 + 360) % 360;
+      applyHeading(trueHeading);
     }
   }, [applyHeading]);
 
   const startCompassListeners = useCallback(() => {
     if (typeof window === "undefined") return;
-    // Prefer deviceorientationabsolute (Android Chrome) for true North
+
+    // On Android Chrome, prefer deviceorientationabsolute
     if ("ondeviceorientationabsolute" in window) {
-      window.addEventListener("deviceorientationabsolute", handleOrientation as EventListener, true);
+      window.addEventListener(
+        "deviceorientationabsolute",
+        handleAbsoluteOrientation as EventListener,
+        true
+      );
     }
-    // Standard deviceorientation for iOS and fallbacks
-    window.addEventListener("deviceorientation", handleOrientation as EventListener, true);
-  }, [handleOrientation]);
+
+    // Standard deviceorientation for iOS webkitCompassHeading and fallback
+    window.addEventListener(
+      "deviceorientation",
+      handleStandardOrientation as EventListener,
+      true
+    );
+  }, [handleAbsoluteOrientation, handleStandardOrientation]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !("DeviceOrientationEvent" in window)) return;
 
     const DevOrient = DeviceOrientationEvent as any;
     if (typeof DevOrient.requestPermission === "function") {
-      // iOS 13+ requires user gesture permission
+      // iOS 13+ requires explicit user gesture to access compass
       setNeedsIosPermission(true);
     } else {
-      // Android / desktop start directly
+      // Android / browsers start listeners directly
       startCompassListeners();
     }
 
     return () => {
       if (typeof window !== "undefined") {
-        window.removeEventListener("deviceorientationabsolute", handleOrientation as EventListener, true);
-        window.removeEventListener("deviceorientation", handleOrientation as EventListener, true);
+        window.removeEventListener(
+          "deviceorientationabsolute",
+          handleAbsoluteOrientation as EventListener,
+          true
+        );
+        window.removeEventListener(
+          "deviceorientation",
+          handleStandardOrientation as EventListener,
+          true
+        );
       }
     };
-  }, [startCompassListeners, handleOrientation]);
+  }, [startCompassListeners, handleAbsoluteOrientation, handleStandardOrientation]);
 
   const handleIosPermission = async () => {
     try {
@@ -104,10 +175,28 @@ export default function QiblaPage() {
     setTimeout(() => setCalibrating(false), 1500);
   };
 
+  const handleManualAdjust = (newVal: number) => {
+    const normalized = ((newVal % 360) + 360) % 360;
+    hasSensorLockRef.current = true;
+    setHasSensorLock(true);
+    let diff = normalized - smoothedHeadingRef.current;
+    while (diff > 180) diff -= 360;
+    while (diff < -180) diff += 360;
+
+    smoothedHeadingRef.current = normalized;
+    continuousHeadingRef.current += diff;
+    setHeading(Math.round(normalized));
+    setContinuousHeading(continuousHeadingRef.current);
+    setCompassActive(true);
+  };
+
   // Compute rotation angle difference
   const diff = ((qiblaBearing - heading + 540) % 360) - 180;
   const isAligned = Math.abs(diff) <= 5;
-  const turnDirection = diff > 0 ? `${Math.abs(Math.round(diff))}° right` : `${Math.abs(Math.round(diff))}° left`;
+  const turnDirection =
+    diff > 0 ? `${Math.abs(Math.round(diff))}° right` : `${Math.abs(Math.round(diff))}° left`;
+
+  const showCalibrationHint = !dismissedCalibrationHint && (!hasSensorLock || lowAccuracy);
 
   return (
     <main className="space-y-4">
@@ -153,18 +242,37 @@ export default function QiblaPage() {
         </div>
       )}
 
-      {/* iOS Compass Permission Button */}
+      {/* iOS Compass Permission Request Button */}
       {needsIosPermission && (
-        <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-[#E3F2ED] border border-[#1D7A5C]/30">
-          <Navigation className="w-4 h-4 text-[#1D7A5C] shrink-0" />
-          <p className="text-xs text-[#1D7A5C] font-medium flex-1">
+        <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-[#E3F2ED] dark:bg-emerald-950/40 border border-[#1D7A5C]/30 text-qalb-ink dark:text-qalb-night-ink">
+          <Navigation className="w-4 h-4 text-qalb-green dark:text-qalb-gold shrink-0" />
+          <p className="text-xs font-medium flex-1">
             Tap to enable the device compass for real-time Qibla direction.
           </p>
           <button
             onClick={handleIosPermission}
-            className="text-xs font-bold text-white bg-qalb-green px-3 py-1.5 rounded-xl"
+            className="text-xs font-bold text-white bg-qalb-green dark:bg-qalb-gold dark:text-qalb-night-bg px-3.5 py-1.5 rounded-xl shadow-xs active:scale-95 transition-all"
           >
             Enable Compass
+          </button>
+        </div>
+      )}
+
+      {/* Calibration Hint Banner (dismissible, shown before lock or on low accuracy) */}
+      {showCalibrationHint && (
+        <div className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-qalb-gold-subtle/80 dark:bg-qalb-night-subtle border border-qalb-gold/30 text-qalb-ink dark:text-qalb-night-ink transition-all animate-in fade-in">
+          <div className="flex items-center gap-2.5 text-xs">
+            <Compass className="w-4 h-4 text-qalb-gold shrink-0 animate-pulse" />
+            <span className="font-medium">
+              Move your phone in a figure-8 motion to calibrate
+            </span>
+          </div>
+          <button
+            onClick={() => setDismissedCalibrationHint(true)}
+            aria-label="Dismiss calibration hint"
+            className="p-1 rounded-full text-qalb-muted hover:text-qalb-ink dark:hover:text-white"
+          >
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
@@ -172,14 +280,24 @@ export default function QiblaPage() {
       {/* Main Compass Card */}
       <section className="p-6 rounded-3xl bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border shadow-qalb-card text-center space-y-4">
         {/* Status Pill */}
-        <div className={`inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-semibold transition-colors ${
-          isAligned
-            ? "bg-[#E3F2ED] text-[#1D7A5C]"
-            : compassActive
-            ? "bg-[#FEF6E4] text-[#C28C1A]"
-            : "bg-qalb-card-subtle dark:bg-qalb-night-subtle text-qalb-muted"
-        }`}>
-          <span className={`w-2 h-2 rounded-full ${isAligned ? "bg-[#1D7A5C]" : compassActive ? "bg-[#C28C1A] animate-pulse" : "bg-qalb-muted"}`} />
+        <div
+          className={`inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-semibold transition-colors ${
+            isAligned
+              ? "bg-[#E3F2ED] text-[#1D7A5C]"
+              : compassActive
+              ? "bg-[#FEF6E4] text-[#C28C1A]"
+              : "bg-qalb-card-subtle dark:bg-qalb-night-subtle text-qalb-muted"
+          }`}
+        >
+          <span
+            className={`w-2 h-2 rounded-full ${
+              isAligned
+                ? "bg-[#1D7A5C]"
+                : compassActive
+                ? "bg-[#C28C1A] animate-pulse"
+                : "bg-qalb-muted"
+            }`}
+          />
           <span>
             {isAligned
               ? "Aligned with Kaaba ✓"
@@ -191,7 +309,7 @@ export default function QiblaPage() {
 
         {/* Circular Compass Dial Container */}
         <div className="relative w-64 h-64 sm:w-72 sm:h-72 mx-auto my-2">
-          {/* Fixed 12 o'clock Phone Heading Indicator at the top */}
+          {/* Fixed 12 o'clock Phone Heading Indicator at top */}
           <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-none">
             <div
               className={`w-1 h-3 rounded-full transition-colors duration-200 ${
@@ -207,7 +325,7 @@ export default function QiblaPage() {
 
           {/* Outer Ring with Cardinal Directions — rotates smoothly by -continuousHeading */}
           <div
-            className="absolute inset-0 rounded-full border-2 border-qalb-border dark:border-qalb-night-border bg-qalb-card-subtle/50 dark:bg-qalb-night-subtle/50 flex items-center justify-center transition-transform duration-200 ease-out"
+            className="absolute inset-0 rounded-full border-2 border-qalb-border dark:border-qalb-night-border bg-qalb-card-subtle/50 dark:bg-qalb-night-subtle/50 flex items-center justify-center transition-transform duration-150 ease-out"
             style={{ transform: `rotate(${-continuousHeading}deg)` }}
           >
             {/* Cardinal Markers locked to the dial */}
@@ -294,7 +412,7 @@ export default function QiblaPage() {
         </div>
       </section>
 
-      {/* Manual Compass Adjust Slider Card (fallback / testing) */}
+      {/* Manual Adjust Slider Card (fallback / test verification) */}
       <section className="p-4 sm:p-5 rounded-2xl bg-qalb-card dark:bg-qalb-night-card border border-qalb-border dark:border-qalb-night-border shadow-qalb-card space-y-3">
         <div className="flex items-center justify-between text-xs">
           <span className="font-bold text-qalb-ink dark:text-qalb-night-ink">
@@ -308,20 +426,20 @@ export default function QiblaPage() {
           min="0"
           max="360"
           value={heading}
-          onChange={(e) => applyHeading(Number(e.target.value))}
+          onChange={(e) => handleManualAdjust(Number(e.target.value))}
           className="w-full h-1.5 bg-qalb-border dark:bg-qalb-night-border rounded-lg appearance-none cursor-pointer accent-qalb-green"
         />
 
         <div className="flex items-center justify-between text-xs pt-1">
           <button
-            onClick={() => applyHeading(heading - 5)}
+            onClick={() => handleManualAdjust(heading - 5)}
             className="px-3 py-1.5 rounded-xl border border-qalb-border bg-qalb-card-subtle text-qalb-ink font-semibold"
           >
             - 5°
           </button>
           <span className="text-[11px] text-qalb-muted font-sans">Drag to simulate compass</span>
           <button
-            onClick={() => applyHeading(heading + 5)}
+            onClick={() => handleManualAdjust(heading + 5)}
             className="px-3 py-1.5 rounded-xl border border-qalb-border bg-qalb-card-subtle text-qalb-ink font-semibold"
           >
             + 5°
@@ -339,7 +457,7 @@ export default function QiblaPage() {
           {[
             "Hold phone flat and away from metal objects or electronic devices.",
             "Rotate slowly until the Kaaba icon aligns with the top indicator.",
-            "Calibrate by moving phone in a figure-8 motion if accuracy seems offset.",
+            "Move phone in a figure-8 motion if accuracy seems offset or drifting.",
             "Use in an open area for highest magnetic compass accuracy.",
           ].map((tip, i) => (
             <div key={i} className="flex items-start gap-2.5">

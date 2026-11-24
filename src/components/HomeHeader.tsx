@@ -12,22 +12,17 @@ export function HomeHeader() {
     isLoadingPrayers,
     reminders,
     saveReminders,
+    theme,
+    toggleTheme,
   } = useApp();
 
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showNotifModal, setShowNotifModal] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
 
   // Local draft for reminders modal
   const [localReminders, setLocalReminders] = useState<Record<string, boolean>>(reminders);
   const [savedSuccess, setSavedSuccess] = useState(false);
-
-  const toggleDark = () => {
-    const next = !isDarkMode;
-    setIsDarkMode(next);
-    document.documentElement.classList.toggle("dark", next);
-  };
 
   const handleOpenNotifModal = () => {
     setLocalReminders(reminders);
@@ -171,10 +166,11 @@ export function HomeHeader() {
                 Dark Mode
               </span>
               <button
-                onClick={toggleDark}
-                className="p-2 rounded-full border border-qalb-border dark:border-qalb-night-border bg-qalb-bg dark:bg-qalb-night-subtle text-qalb-ink dark:text-qalb-night-ink"
+                onClick={toggleTheme}
+                aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+                className="p-2 rounded-full border border-qalb-border dark:border-qalb-night-border bg-qalb-bg dark:bg-qalb-night-subtle text-qalb-ink dark:text-qalb-night-ink hover:border-qalb-gold transition-colors"
               >
-                {isDarkMode ? <Sun className="w-4 h-4 text-qalb-gold" /> : <Moon className="w-4 h-4 text-qalb-green" />}
+                {theme === "dark" ? <Sun className="w-4 h-4 text-qalb-gold" /> : <Moon className="w-4 h-4 text-qalb-green" />}
               </button>
             </div>
 
