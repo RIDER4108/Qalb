@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Play, Pause, Volume2, VolumeX, X, RotateCcw } from "lucide-react";
+import { useApp } from "@/context/AppContext";
 
 interface AudioPlayerBarProps {
   audioUrl: string;
@@ -16,11 +17,19 @@ export function AudioPlayerBar({
   reciterName = "Mishary Rashid Alafasy (Vocal Only)",
   onClose,
 }: AudioPlayerBarProps) {
+  const { setIsAudioActive } = useApp();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
+
+  useEffect(() => {
+    setIsAudioActive(true);
+    return () => {
+      setIsAudioActive(false);
+    };
+  }, [setIsAudioActive]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -74,7 +83,7 @@ export function AudioPlayerBar({
   };
 
   return (
-    <div className="fixed bottom-20 inset-x-0 z-40 flex justify-center px-4 animate-in slide-in-from-bottom duration-200">
+    <div className="fixed bottom-[74px] sm:bottom-20 inset-x-0 z-50 flex justify-center px-4 animate-in slide-in-from-bottom duration-200">
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
 
       <div className="w-full max-w-lg p-3 sm:p-4 rounded-3xl border shadow-qalb-float backdrop-blur-xl bg-qalb-card/95 dark:bg-qalb-night-card/95 border-qalb-border dark:border-qalb-night-border flex flex-col gap-2">

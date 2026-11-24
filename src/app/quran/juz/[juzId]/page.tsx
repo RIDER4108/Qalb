@@ -4,6 +4,7 @@ import { useEffect, useState, use, useRef } from "react";
 import Link from "next/link";
 import { getParahVerses, ParahAyah } from "@/services/quran";
 import { PARAHS_LIST, ParahMeta } from "@/data/parahs";
+import { useApp } from "@/context/AppContext";
 import {
   ArrowLeft,
   ChevronLeft,
@@ -30,6 +31,7 @@ interface ParahPageProps {
 export default function ParahDetailPage({ params }: ParahPageProps) {
   const resolvedParams = use(params);
   const juzId = parseInt(resolvedParams.juzId, 10);
+  const { setIsAudioActive } = useApp();
 
   const [meta, setMeta] = useState<ParahMeta | null>(null);
   const [ayahs, setAyahs] = useState<ParahAyah[]>([]);
@@ -51,6 +53,12 @@ export default function ParahDetailPage({ params }: ParahPageProps) {
     "text-3xl sm:text-4xl leading-[2.5]",
     "text-4xl sm:text-5xl leading-[2.6]",
   ];
+
+  useEffect(() => {
+    return () => {
+      setIsAudioActive(false);
+    };
+  }, [setIsAudioActive]);
 
   useEffect(() => {
     async function loadParah() {
@@ -86,16 +94,54 @@ export default function ParahDetailPage({ params }: ParahPageProps) {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
+  // Main banner tap: auto-starts Parah recitation from Ayah 1 (or resumes current)
+  const handleMainListenTap = () => {
+    if (!audioRef.current || ayahs.length === 0) return;
+
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+      setIsAudioActive(false);
+      return;
+    }
+
+    const targetIndex = currentAyahIndex !== null ? currentAyahIndex : 0;
+    const targetAyah = ayahs[targetIndex];
+    if (!targetAyah) return;
+
+    setCurrentAyahIndex(targetIndex);
+    setIsPlaying(true);
+    setIsAudioActive(true);
+
+    if (audioRef.current.src !== targetAyah.audioUrl) {
+      audioRef.current.src = targetAyah.audioUrl;
+    }
+
+    // Synchronously initiate audio playback inside user tap handler
+    audioRef.current.play().catch((err) => {
+      console.warn("Autoplay blocked or interrupted:", err);
+      setIsPlaying(false);
+      setIsAudioActive(false);
+    });
+
+    const el = document.getElementById(`parah-ayah-${targetAyah.number}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  };
+
   const handleTogglePlayAyah = (index: number) => {
-    if (!audioRef.current) return;
+    if (!audioRef.current || !ayahs[index]) return;
 
     if (currentAyahIndex === index) {
       if (isPlaying) {
         audioRef.current.pause();
         setIsPlaying(false);
+        setIsAudioActive(false);
       } else {
         audioRef.current.play().catch(console.warn);
         setIsPlaying(true);
+        setIsAudioActive(true);
       }
       return;
     }
@@ -103,9 +149,11 @@ export default function ParahDetailPage({ params }: ParahPageProps) {
     const ayah = ayahs[index];
     setCurrentAyahIndex(index);
     setIsPlaying(true);
+    setIsAudioActive(true);
 
     audioRef.current.src = ayah.audioUrl;
     audioRef.current.currentTime = 0;
+    // Synchronously initiate playback on tap
     audioRef.current.play().catch(console.warn);
 
     const el = document.getElementById(`parah-ayah-${ayah.number}`);
@@ -122,6 +170,7 @@ export default function ParahDetailPage({ params }: ParahPageProps) {
       const nextAyah = ayahs[nextIndex];
       setCurrentAyahIndex(nextIndex);
       setIsPlaying(true);
+      setIsAudioActive(true);
 
       if (audioRef.current) {
         audioRef.current.src = nextAyah.audioUrl;
@@ -135,6 +184,7 @@ export default function ParahDetailPage({ params }: ParahPageProps) {
     } else {
       setIsPlaying(false);
       setCurrentAyahIndex(null);
+      setIsAudioActive(false);
     }
   };
 
@@ -156,6 +206,7 @@ export default function ParahDetailPage({ params }: ParahPageProps) {
     }
     setIsPlaying(false);
     setCurrentAyahIndex(null);
+    setIsAudioActive(false);
   };
 
   const prevJuzId = juzId > 1 ? juzId - 1 : null;
@@ -167,7 +218,10 @@ export default function ParahDetailPage({ params }: ParahPageProps) {
       <audio
         ref={audioRef}
         onEnded={handleAudioEnded}
-        onError={() => setIsPlaying(false)}
+        onError={() => {
+          setIsPlaying(false);
+          setIsAudioActive(false);
+        }}
         preload="none"
       />
 
@@ -251,8 +305,27 @@ export default function ParahDetailPage({ params }: ParahPageProps) {
               {meta.startRef} to {meta.endRef}
             </p>
 
-            {/* Font Zoom Controls */}
-            <div className="pt-2 flex items-center justify-center gap-2.5">
+            {/* Action Controls: Auto-Starting Audio & Font Zoom Controls */}
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-2.5">
+              <button
+                onClick={handleMainListenTap}
+                className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 bg-qalb-green dark:bg-qalb-gold text-white dark:text-qalb-night-bg hover:opacity-90 active:scale-95 shadow-sm"
+              >
+                {isPlaying ? (
+                  <Pause className="w-3.5 h-3.5" />
+                ) : (
+                  <Play className="w-3.5 h-3.5 ml-0.5 fill-current" />
+                )}
+                <span>
+                  {isPlaying
+                    ? "Pause Recitation"
+                    : currentAyahIndex !== null
+                    ? `Resume Ayah ${ayahs[currentAyahIndex]?.numberInSurah}`
+                    : "Listen Vocal Recitation"}
+                </span>
+              </button>
+
+              {/* Font Zoom Controls */}
               <div className="flex items-center gap-1 p-1 rounded-full border border-qalb-border dark:border-qalb-night-border bg-qalb-card-subtle dark:bg-qalb-night-subtle">
                 <button
                   onClick={() => setFontSizeLevel((prev) => Math.max(0, prev - 1))}
@@ -277,8 +350,12 @@ export default function ParahDetailPage({ params }: ParahPageProps) {
             </div>
           </section>
 
-          {/* Ayahs List */}
-          <div className="space-y-3.5 pb-20">
+          {/* Ayahs List with dynamic bottom padding when player is active */}
+          <div
+            className={`space-y-3.5 transition-all duration-200 ${
+              currentAyahIndex !== null ? "pb-40 sm:pb-44" : "pb-20"
+            }`}
+          >
             {ayahs.map((ayah, index) => {
               const isFirstInSurah =
                 index === 0 || ayahs[index - 1].surahNumber !== ayah.surahNumber;
@@ -439,9 +516,9 @@ export default function ParahDetailPage({ params }: ParahPageProps) {
             )}
           </nav>
 
-          {/* Floating Ayah Playback Controller Bar */}
+          {/* Floating Ayah Playback Controller Bar: z-50, sits cleanly above BottomNav */}
           {currentAyahIndex !== null && (
-            <div className="fixed bottom-20 inset-x-3 z-40 max-w-lg mx-auto animate-in slide-in-from-bottom duration-200">
+            <div className="fixed bottom-[74px] sm:bottom-20 inset-x-3 z-50 max-w-lg mx-auto animate-in slide-in-from-bottom duration-200">
               <div className="p-3.5 rounded-2xl border shadow-qalb-float backdrop-blur-xl bg-qalb-card/95 dark:bg-qalb-night-card/95 border-qalb-gold/40 flex items-center justify-between gap-3 text-qalb-ink dark:text-qalb-night-ink">
                 <div className="flex-1 truncate">
                   <div className="flex items-center gap-2">

@@ -3,21 +3,21 @@
 import { useState, useRef, useEffect } from "react";
 import { Chapter, Verse } from "@/types/quran";
 import { getAyahAudioUrl } from "@/services/quran";
-import { Volume2, Copy, Check, Minus, Plus, Play, Pause, SkipBack, SkipForward, X } from "lucide-react";
+import { useApp } from "@/context/AppContext";
+import { Copy, Check, Minus, Plus, Play, Pause, SkipBack, SkipForward, X } from "lucide-react";
 
 interface QuranReaderProps {
   chapter: Chapter;
   verses: Verse[];
-  onPlayChapterAudio: () => void;
+  onPlayChapterAudio?: () => void;
   isPlayingAudio?: boolean;
 }
 
 export function QuranReader({
   chapter,
   verses,
-  onPlayChapterAudio,
-  isPlayingAudio = false,
 }: QuranReaderProps) {
+  const { setIsAudioActive } = useApp();
   const [fontSizeLevel, setFontSizeLevel] = useState<number>(1);
   const [copiedVerse, setCopiedVerse] = useState<string | null>(null);
 
@@ -33,6 +33,13 @@ export function QuranReader({
     "text-4xl sm:text-5xl leading-[2.6]",
   ];
 
+  // Clean up global audio active state on unmount
+  useEffect(() => {
+    return () => {
+      setIsAudioActive(false);
+    };
+  }, [setIsAudioActive]);
+
   const handleCopyVerse = (verseKey: string, arabicText: string, translationText?: string) => {
     const textToCopy = `${arabicText}\n\n"${translationText || ""}"\n[Surah ${chapter.name_simple} ${verseKey}] — via Qalb`;
     navigator.clipboard.writeText(textToCopy);
@@ -40,29 +47,71 @@ export function QuranReader({
     setTimeout(() => setCopiedVerse(null), 2000);
   };
 
-  // Play / Pause specific Ayah
+  // Main Banner Listen Tap: Auto-starts from Ayah 1 or resumes immediately
+  const handleMainListenTap = () => {
+    if (!ayahAudioRef.current || verses.length === 0) return;
+
+    if (isPlayingAyah) {
+      ayahAudioRef.current.pause();
+      setIsPlayingAyah(false);
+      setIsAudioActive(false);
+      return;
+    }
+
+    const targetIndex = currentAyahIndex !== null ? currentAyahIndex : 0;
+    const targetVerse = verses[targetIndex];
+    if (!targetVerse) return;
+
+    setCurrentAyahIndex(targetIndex);
+    setIsPlayingAyah(true);
+    setIsAudioActive(true);
+
+    const url = getAyahAudioUrl(chapter.id, targetVerse.verse_number);
+    if (ayahAudioRef.current.src !== url) {
+      ayahAudioRef.current.src = url;
+    }
+
+    // Synchronously initiate playback inside user click handler to satisfy iOS Safari & Chrome policies
+    ayahAudioRef.current.play().catch((err) => {
+      console.warn("Autoplay blocked or playback interrupted:", err);
+      setIsPlayingAyah(false);
+      setIsAudioActive(false);
+    });
+
+    // Smooth scroll to the playing verse card
+    const el = document.getElementById(`verse-${targetVerse.verse_number}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  };
+
+  // Play / Pause specific individual Ayah
   const handleTogglePlayAyah = (index: number) => {
-    if (!ayahAudioRef.current) return;
+    if (!ayahAudioRef.current || !verses[index]) return;
 
     if (currentAyahIndex === index) {
       if (isPlayingAyah) {
         ayahAudioRef.current.pause();
         setIsPlayingAyah(false);
+        setIsAudioActive(false);
       } else {
         ayahAudioRef.current.play().catch(console.warn);
         setIsPlayingAyah(true);
+        setIsAudioActive(true);
       }
       return;
     }
 
-    // Start new Ayah
+    // Start selected Ayah
     const verse = verses[index];
     const url = getAyahAudioUrl(chapter.id, verse.verse_number);
     setCurrentAyahIndex(index);
     setIsPlayingAyah(true);
+    setIsAudioActive(true);
 
     ayahAudioRef.current.src = url;
     ayahAudioRef.current.currentTime = 0;
+    // Synchronously initiate audio playback on tap
     ayahAudioRef.current.play().catch(console.warn);
 
     // Smooth scroll to the playing verse card
@@ -72,7 +121,7 @@ export function QuranReader({
     }
   };
 
-  // Advance to next Ayah onEnded
+  // Continuous playback: automatically advance to next Ayah onEnded
   const handleAyahEnded = () => {
     if (currentAyahIndex === null) return;
 
@@ -81,6 +130,7 @@ export function QuranReader({
       const nextVerse = verses[nextIndex];
       setCurrentAyahIndex(nextIndex);
       setIsPlayingAyah(true);
+      setIsAudioActive(true);
 
       if (ayahAudioRef.current) {
         ayahAudioRef.current.src = getAyahAudioUrl(chapter.id, nextVerse.verse_number);
@@ -94,6 +144,7 @@ export function QuranReader({
     } else {
       setIsPlayingAyah(false);
       setCurrentAyahIndex(null);
+      setIsAudioActive(false);
     }
   };
 
@@ -115,17 +166,21 @@ export function QuranReader({
     }
     setIsPlayingAyah(false);
     setCurrentAyahIndex(null);
+    setIsAudioActive(false);
   };
 
   const isBismillahOmitted = chapter.id === 1 || chapter.id === 9;
 
   return (
     <div className="space-y-4">
-      {/* Hidden Audio element for continuous per-ayah recitation */}
+      {/* Audio element for continuous per-ayah recitation */}
       <audio
         ref={ayahAudioRef}
         onEnded={handleAyahEnded}
-        onError={() => setIsPlayingAyah(false)}
+        onError={() => {
+          setIsPlayingAyah(false);
+          setIsAudioActive(false);
+        }}
         preload="none"
       />
 
@@ -156,17 +211,24 @@ export function QuranReader({
           {chapter.translated_name.name}
         </p>
 
-        {/* Action Controls: Audio Recitation & Font Size */}
+        {/* Action Controls: Auto-Starting Audio Recitation & Font Size */}
         <div className="pt-2 flex flex-wrap items-center justify-center gap-2.5">
           <button
-            onClick={() => {
-              handleCloseAyahAudio();
-              onPlayChapterAudio();
-            }}
+            onClick={handleMainListenTap}
             className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 bg-qalb-green dark:bg-qalb-gold text-white dark:text-qalb-night-bg hover:opacity-90 active:scale-95 shadow-sm"
           >
-            <Volume2 className="w-3.5 h-3.5" />
-            <span>{isPlayingAudio ? "Playing Chapter..." : "Listen Full Surah"}</span>
+            {isPlayingAyah ? (
+              <Pause className="w-3.5 h-3.5" />
+            ) : (
+              <Play className="w-3.5 h-3.5 ml-0.5 fill-current" />
+            )}
+            <span>
+              {isPlayingAyah
+                ? "Pause Recitation"
+                : currentAyahIndex !== null
+                ? `Resume Ayah ${verses[currentAyahIndex]?.verse_number}`
+                : "Listen Vocal Recitation"}
+            </span>
           </button>
 
           {/* Font Zoom Controls */}
@@ -207,8 +269,12 @@ export function QuranReader({
         </div>
       )}
 
-      {/* Verses List */}
-      <div className="space-y-3.5 pb-20">
+      {/* Verses List with dynamic bottom padding when player is active */}
+      <div
+        className={`space-y-3.5 transition-all duration-200 ${
+          currentAyahIndex !== null ? "pb-40 sm:pb-44" : "pb-20"
+        }`}
+      >
         {verses.map((verse, index) => {
           const translation = verse.translations?.[0]?.text?.replace(/<[^>]*>/g, "");
           const isCopied = copiedVerse === verse.verse_key;
@@ -311,9 +377,9 @@ export function QuranReader({
         })}
       </div>
 
-      {/* Floating Ayah Playback Controller Bar */}
+      {/* Floating Ayah Playback Controller Bar: z-50, sits cleanly above BottomNav */}
       {currentAyahIndex !== null && (
-        <div className="fixed bottom-20 inset-x-3 z-40 max-w-lg mx-auto animate-in slide-in-from-bottom duration-200">
+        <div className="fixed bottom-[74px] sm:bottom-20 inset-x-3 z-50 max-w-lg mx-auto animate-in slide-in-from-bottom duration-200">
           <div className="p-3.5 rounded-2xl border shadow-qalb-float backdrop-blur-xl bg-qalb-card/95 dark:bg-qalb-night-card/95 border-qalb-gold/40 flex items-center justify-between gap-3 text-qalb-ink dark:text-qalb-night-ink">
             <div className="flex-1 truncate">
               <div className="flex items-center gap-2">

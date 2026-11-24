@@ -2,10 +2,9 @@
 
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
-import { getChapterDetails, getChapterVerses, getChapterAudio, DEFAULT_RECITER_NAME } from "@/services/quran";
+import { getChapterDetails, getChapterVerses } from "@/services/quran";
 import { Chapter, Verse } from "@/types/quran";
 import { QuranReader } from "@/components/QuranReader";
-import { AudioPlayerBar } from "@/components/AudioPlayerBar";
 import { ArrowLeft, ChevronLeft, ChevronRight, AlertCircle, RefreshCw } from "lucide-react";
 
 interface SurahPageProps {
@@ -20,8 +19,6 @@ export default function SurahDetailPage({ params }: SurahPageProps) {
 
   const [chapter, setChapter] = useState<Chapter | null>(null);
   const [verses, setVerses] = useState<Verse[]>([]);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [showAudioPlayer, setShowAudioPlayer] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,13 +41,6 @@ export default function SurahDetailPage({ params }: SurahPageProps) {
 
         setChapter(chData);
         setVerses(vData.verses);
-
-        try {
-          const audioData = await getChapterAudio(surahId);
-          setAudioUrl(audioData.audio_file.audio_url);
-        } catch (audioErr) {
-          console.warn("Failed to fetch chapter audio:", audioErr);
-        }
       } catch (err: any) {
         console.error("Failed to load surah:", err);
         setError("Failed to load Surah verses. Please check your internet connection.");
@@ -123,12 +113,6 @@ export default function SurahDetailPage({ params }: SurahPageProps) {
           <QuranReader
             chapter={chapter}
             verses={verses}
-            onPlayChapterAudio={() => {
-              if (audioUrl) {
-                setShowAudioPlayer(true);
-              }
-            }}
-            isPlayingAudio={showAudioPlayer}
           />
 
           {/* Surah Navigation (Prev / Next) */}
@@ -157,16 +141,6 @@ export default function SurahDetailPage({ params }: SurahPageProps) {
               <div />
             )}
           </nav>
-
-          {/* Vocal-only audio player */}
-          {showAudioPlayer && audioUrl && (
-            <AudioPlayerBar
-              audioUrl={audioUrl}
-              surahName={`Surah ${chapter.name_simple} (${chapter.name_arabic})`}
-              reciterName={DEFAULT_RECITER_NAME}
-              onClose={() => setShowAudioPlayer(false)}
-            />
-          )}
         </>
       )}
     </main>

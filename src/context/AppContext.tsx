@@ -88,6 +88,10 @@ export interface AppContextType {
   theme: "light" | "dark";
   toggleTheme: () => void;
   setTheme: (theme: "light" | "dark") => void;
+
+  // Global Audio Status (to coordinate overlapping UI like floating Dua button)
+  isAudioActive: boolean;
+  setIsAudioActive: (active: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -114,30 +118,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     computeQibla(DEFAULT_LOCATIONS[0].latitude || 21.4225, DEFAULT_LOCATIONS[0].longitude || 39.8262)
   );
 
-  // Theme State
-  const [theme, setThemeState] = useState<"light" | "dark">("dark");
+  // Theme State: single source of truth using 'qalb-theme'
+  const [theme, setThemeState] = useState<"light" | "dark">("light");
+
+  // Global Audio Playback State (prevents floating pill overlaps)
+  const [isAudioActive, setIsAudioActive] = useState<boolean>(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    try {
-      const stored = localStorage.getItem("theme") || localStorage.getItem("nur-theme");
-      if (stored === "light" || stored === "dark") {
-        setThemeState(stored);
-        document.documentElement.classList.toggle("dark", stored === "dark");
-      } else {
-        const isDark =
-          document.documentElement.classList.contains("dark") ||
-          window.matchMedia("(prefers-color-scheme: dark)").matches;
-        const initial = isDark ? "dark" : "light";
-        setThemeState(initial);
-        document.documentElement.classList.toggle("dark", isDark);
-      }
-    } catch (_) {}
+    // On mount, sync the UI state purely by reading document.documentElement.classList.contains("dark")
+    // NEVER touch document.documentElement.classList or localStorage in mount effect!
+    const isDark = document.documentElement.classList.contains("dark");
+    setThemeState(isDark ? "dark" : "light");
 
     const handleStorage = (e: StorageEvent) => {
-      if (e.key === "theme" && (e.newValue === "light" || e.newValue === "dark")) {
+      if (e.key === "qalb-theme" && (e.newValue === "light" || e.newValue === "dark")) {
         setThemeState(e.newValue);
-        document.documentElement.classList.toggle("dark", e.newValue === "dark");
+        if (e.newValue === "dark") {
+          document.documentElement.classList.add("dark");
+        } else {
+          document.documentElement.classList.remove("dark");
+        }
       }
     };
     window.addEventListener("storage", handleStorage);
@@ -147,20 +148,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setTheme = useCallback((newTheme: "light" | "dark") => {
     setThemeState(newTheme);
     try {
-      localStorage.setItem("theme", newTheme);
-      localStorage.setItem("nur-theme", newTheme);
+      localStorage.setItem("qalb-theme", newTheme);
     } catch (_) {}
-    document.documentElement.classList.toggle("dark", newTheme === "dark");
+    if (newTheme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
   }, []);
 
   const toggleTheme = useCallback(() => {
     setThemeState((prev) => {
       const next = prev === "dark" ? "light" : "dark";
       try {
-        localStorage.setItem("theme", next);
-        localStorage.setItem("nur-theme", next);
+        localStorage.setItem("qalb-theme", next);
       } catch (_) {}
-      document.documentElement.classList.toggle("dark", next === "dark");
+      if (next === "dark") {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
       return next;
     });
   }, []);
@@ -855,6 +862,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         theme,
         toggleTheme,
         setTheme,
+        isAudioActive,
+        setIsAudioActive,
       }}
     >
       {children}
