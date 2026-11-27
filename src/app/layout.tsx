@@ -78,16 +78,37 @@ export default function RootLayout({
           }}
         />
 
-        {/* Service Worker Registration */}
+        {/* Service Worker Registration & Auto-Update Listener */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                  navigator.serviceWorker.register('/sw.js').catch((err) => {
-                    console.log('SW registration error:', err);
+                (function() {
+                  var refreshing = false;
+                  var hadController = !!navigator.serviceWorker.controller;
+
+                  navigator.serviceWorker.addEventListener('controllerchange', function() {
+                    if (!hadController || refreshing) return;
+                    refreshing = true;
+                    window.location.reload();
                   });
-                });
+
+                  window.addEventListener('load', function() {
+                    navigator.serviceWorker
+                      .register('/sw.js', { updateViaCache: 'none' })
+                      .then(function(registration) {
+                        registration.update();
+                        document.addEventListener('visibilitychange', function() {
+                          if (document.visibilityState === 'visible') {
+                            registration.update();
+                          }
+                        });
+                      })
+                      .catch(function(err) {
+                        console.log('SW registration error:', err);
+                      });
+                  });
+                })();
               }
             `,
           }}
